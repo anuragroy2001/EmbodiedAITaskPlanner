@@ -184,7 +184,7 @@ def generate_task_dag(topology, locations, goal, node_name, use_mock=False, robo
     grounded_context = build_grounded_context(topology, locations)
     context_keys = list(grounded_context.keys()) if isinstance(grounded_context, dict) else "?"
     print(f"[planner] Grounded context keys: {context_keys}")
-    prompt_context = build_planner_user_prompt(goal, grounded_context, node_name)
+    prompt_context = build_planner_user_prompt(goal, grounded_context, node_name, robot_type=robot_type)
     print(f"[planner] User prompt length: {len(prompt_context)} chars")
 
     if use_mock:
@@ -202,7 +202,7 @@ def generate_task_dag(topology, locations, goal, node_name, use_mock=False, robo
     planner_output = parse_planner_output(raw_output, goal, node_name)
     print(f"[planner] Parsed: task_id={planner_output.task_id!r}, subtasks={len(planner_output.subtasks)}")
     planner_output = apply_deterministic_grounding(planner_output, grounded_context)
-    validation = validate_planner_output(planner_output, grounded_context)
+    validation = validate_planner_output(planner_output, grounded_context, robot_type=robot_type)
     print(f"[planner] Validation: valid={validation.valid}, errors={len(validation.errors)}, warnings={len(validation.warnings)}")
     if validation.errors:
         for err in validation.errors:
@@ -220,7 +220,7 @@ def generate_task_dag(topology, locations, goal, node_name, use_mock=False, robo
         )
         planner_output = parse_planner_output(repaired_raw, goal, node_name)
         planner_output = apply_deterministic_grounding(planner_output, grounded_context)
-        validation = validate_planner_output(planner_output, grounded_context)
+        validation = validate_planner_output(planner_output, grounded_context, robot_type=robot_type)
         print(f"[planner] After repair: valid={validation.valid}, errors={len(validation.errors)}")
 
     planner_output.warnings.extend(validation.warnings)

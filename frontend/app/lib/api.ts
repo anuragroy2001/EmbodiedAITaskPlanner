@@ -94,11 +94,11 @@ export const api = {
         return res.json();
     },
 
-    planQa: async (message: string, nodeName: string, history: { role: string; text: string }[]): Promise<PlanQAResponse> => {
+    planQa: async (message: string, nodeName: string, history: { role: string; text: string }[], robotType: string = "humanoid"): Promise<PlanQAResponse> => {
         const res = await fetch(`${API_BASE_URL}/plan-qa`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message, node_name: nodeName, history }),
+            body: JSON.stringify({ message, node_name: nodeName, history, robot_type: robotType }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || "Plan QA request failed");

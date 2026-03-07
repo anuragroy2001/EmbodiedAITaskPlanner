@@ -5,6 +5,7 @@ from typing import List
 import networkx as nx
 
 from .planner_normalization import resolve_object_id
+from .planner_prompts import get_allowed_actions, normalize_action
 from .planner_schemas import PlannerOutput, Subtask, ValidationResult
 
 
@@ -90,6 +91,20 @@ def validate_dependency_graph_matches_subtasks(
     return errors
 
 
+def validate_actions_for_robot(subtasks: List[Subtask], robot_type: str) -> List[str]:
+    """Reject subtasks whose action verb is not in the allowed set for this robot type."""
+    errors: List[str] = []
+    allowed = get_allowed_actions(robot_type)
+    for st in subtasks:
+        action = normalize_action(st.action)
+        if action not in allowed:
+            errors.append(
+                f"Subtask '{st.id}' action '{st.action}' is not allowed for "
+                f"robot type '{robot_type}'. Allowed: {', '.join(sorted(allowed))}"
+            )
+    return errors
+
+
 def validate_task_locations(subtasks: List[Subtask]) -> List[str]:
     """If location is set, require 0 <= x,y <= 100."""
     errors: List[str] = []
@@ -105,7 +120,7 @@ def validate_task_locations(subtasks: List[Subtask]) -> List[str]:
 
 
 def validate_planner_output(
-    planner_output: PlannerOutput, grounded_context: dict
+    planner_output: PlannerOutput, grounded_context: dict, robot_type: str = "humanoid"
 ) -> ValidationResult:
     """Run all checks and return ValidationResult."""
     all_errors: List[str] = []
@@ -121,6 +136,7 @@ def validate_planner_output(
         )
     )
     all_errors.extend(validate_task_locations(planner_output.subtasks))
+    all_errors.extend(validate_actions_for_robot(planner_output.subtasks, robot_type))
 
     return ValidationResult(
         valid=len(all_errors) == 0,

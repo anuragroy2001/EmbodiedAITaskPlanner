@@ -9,8 +9,8 @@ import InteractivePlanView from "./InteractivePlanView";
 
 const ROBOT_TYPE_OPTIONS = [
   { value: "humanoid" as const, label: "Humanoid", Icon: HumanoidSvgContent },
-  { value: "quadrupeds" as const, label: "Quadrupeds", Icon: QuadrupedSvgContent },
-  { value: "mobile base" as const, label: "Mobile base", Icon: MobileBaseSvgContent },
+  { value: "quadruped" as const, label: "Quadruped", Icon: QuadrupedSvgContent },
+  { value: "mobile_base" as const, label: "Mobile Base", Icon: MobileBaseSvgContent },
 ] as const;
 type RobotTypeValue = (typeof ROBOT_TYPE_OPTIONS)[number]["value"];
 
@@ -61,7 +61,7 @@ export default function CommandBarComponent({ topology, systemLogs, onPlanGenera
         setIsChatting(true);
 
         try {
-            const data = await api.planQa(userMsg, topology.node_name, newHistory);
+            const data = await api.planQa(userMsg, topology.node_name, newHistory, robotType);
             if (data.status === "question") {
                 setChatHistory(prev => [...prev, { role: 'model', text: data.text }]);
             } else if (data.status === "plan") {

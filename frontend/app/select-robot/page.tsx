@@ -8,7 +8,7 @@ import { HumanoidSvgContent, QuadrupedSvgContent, MobileBaseSvgContent } from ".
 import { motion } from "framer-motion";
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 
-type RobotType = "humanoid" | "quadruped" | "mobile-base";
+type RobotType = "humanoid" | "quadruped" | "mobile_base";
 
 interface RobotOption {
   id: RobotType;
@@ -31,7 +31,7 @@ const robots: RobotOption[] = [
     icon: <QuadrupedSvgContent />,
   },
   {
-    id: "mobile-base",
+    id: "mobile_base",
     name: "Mobile Base",
     description: "Wheeled platform ideal for indoor navigation on flat surfaces with sensor payloads.",
     icon: <MobileBaseSvgContent />,
@@ -56,8 +56,7 @@ export default function SelectRobotPage() {
 
   const handleContinue = () => {
     if (!selected) return;
-    const cookieValue = selected === "humanoid" ? "humanoid" : selected === "quadruped" ? "quadrupeds" : "mobile base";
-    setCookie(ROBOT_TYPE_COOKIE, cookieValue, { maxAge: 365 * 24 * 60 * 60, path: "/" });
+    setCookie(ROBOT_TYPE_COOKIE, selected, { maxAge: 365 * 24 * 60 * 60, path: "/" });
     sessionStorage.setItem("robotType", selected);
     router.push("/dashboard");
   };
