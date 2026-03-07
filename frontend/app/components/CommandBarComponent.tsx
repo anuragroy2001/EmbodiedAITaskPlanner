@@ -17,9 +17,10 @@ type RobotTypeValue = (typeof ROBOT_TYPE_OPTIONS)[number]["value"];
 interface CommandBarProps {
     topology: SpatialNode | null;
     systemLogs: string[];
+    onPlanGenerated?: (plan: PlannerOutput) => void;
 }
 
-export default function CommandBarComponent({ topology, systemLogs }: CommandBarProps) {
+export default function CommandBarComponent({ topology, systemLogs, onPlanGenerated }: CommandBarProps) {
     const [chatHistory, setChatHistory] = useState<{ role: 'user' | 'model', text: string }[]>([]);
     const [chatInput, setChatInput] = useState("");
     const [isChatting, setIsChatting] = useState(false);
@@ -66,6 +67,7 @@ export default function CommandBarComponent({ topology, systemLogs }: CommandBar
             } else if (data.status === "plan") {
                 setLatestPlan(data.plan);
                 setLatestPlanSummary(data.plan_summary);
+                onPlanGenerated?.(data.plan);
                 setChatHistory(prev => [...prev, { role: 'model', text: `Here's your plan: ${data.plan.goal}` }]);
             } else {
                 const errMsg = data.errors?.length ? `${data.message}: ${data.errors.join(", ")}` : data.message;

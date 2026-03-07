@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { SpatialNode, ObjectLocation, api } from '../../lib/api';
+import { SpatialNode, ObjectLocation, PlannerOutput, api } from '../../lib/api';
 import CommandBarComponent from "../../components/CommandBarComponent";
 import InteriorMapComponent from "../../components/InteriorMapComponent";
 import SemanticGraph from "../../components/SemanticGraph";
@@ -20,6 +20,7 @@ export default function ResultsPage() {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [robotApiUrl] = useState("http://localhost:8080/nav2/follow_waypoints");
   const [systemLogs, setSystemLogs] = useState<string[]>([]);
+  const [activePlan, setActivePlan] = useState<PlannerOutput | null>(null);
 
   const addSystemLog = (msg: string) => {
     setSystemLogs(prev => [...prev, msg]);
@@ -146,6 +147,7 @@ export default function ResultsPage() {
                       sourceImages={sourceImages} selectedObjectId={selectedObjectId}
                       onSelectObject={setSelectedObjectId} theme={theme}
                       robotApiUrl={robotApiUrl} onAddSystemLog={addSystemLog}
+                      plan={activePlan}
                     />
                   )}
                   {viewMode === 'GRAPH' && <SemanticGraph data={topology} />}
@@ -163,7 +165,7 @@ export default function ResultsPage() {
 
           {/* Chat */}
           <div className="lg:col-span-4 flex flex-col min-h-0 animate-fade-in-up" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
-            <CommandBarComponent topology={topology} systemLogs={systemLogs} />
+            <CommandBarComponent topology={topology} systemLogs={systemLogs} onPlanGenerated={setActivePlan} />
           </div>
         </main>
 

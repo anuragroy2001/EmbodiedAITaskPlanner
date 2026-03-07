@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Download, X, Eye, Loader2, Send } from "lucide-react";
-import { ObjectLocation, SpatialNode } from "../lib/api";
+import { ObjectLocation, SpatialNode, PlannerOutput } from "../lib/api";
 
 interface InteriorMapProps {
     mapImage: string;
@@ -14,16 +14,49 @@ interface InteriorMapProps {
     theme: 'dark' | 'light';
     robotApiUrl: string;
     onAddSystemLog: (msg: string) => void;
+    plan?: PlannerOutput | null;
 }
 
 export default function InteriorMapComponent({
     mapImage, locations, topology, sourceImages,
     selectedObjectId, onSelectObject, theme,
-    robotApiUrl, onAddSystemLog
+    robotApiUrl, onAddSystemLog, plan
 }: InteriorMapProps) {
     const [hoveredId, setHoveredId] = useState<string | null>(null);
     const [viewingSource, setViewingSource] = useState<{ objectId: string; imageIndices: number[] } | null>(null);
     const [isDispatching, setIsDispatching] = useState(false);
+    const [imgBounds, setImgBounds] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
+    const imgRef = useRef<HTMLImageElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    const recalcBounds = useCallback(() => {
+        const img = imgRef.current;
+        const container = containerRef.current;
+        if (!img || !container || !img.naturalWidth || !img.naturalHeight) return;
+        const cw = container.clientWidth;
+        const ch = container.clientHeight;
+        const imgRatio = img.naturalWidth / img.naturalHeight;
+        const containerRatio = cw / ch;
+        let rw: number, rh: number;
+        if (imgRatio > containerRatio) {
+            rw = cw;
+            rh = cw / imgRatio;
+        } else {
+            rh = ch;
+            rw = ch * imgRatio;
+        }
+        setImgBounds({
+            left: (cw - rw) / 2,
+            top: (ch - rh) / 2,
+            width: rw,
+            height: rh,
+        });
+    }, []);
+
+    useEffect(() => {
+        window.addEventListener("resize", recalcBounds);
+        return () => window.removeEventListener("resize", recalcBounds);
+    }, [recalcBounds]);
 
     if (!mapImage) return null;
 
@@ -109,7 +142,7 @@ export default function InteriorMapComponent({
     };
 
     return (
-        <div className="w-full h-full relative">
+        <div ref={containerRef} className="w-full h-full relative">
             {/* Action buttons */}
             <div className="absolute top-3 right-3 z-20 flex gap-1.5">
                 <button onClick={handleDownload}
@@ -137,7 +170,15 @@ export default function InteriorMapComponent({
                 </button>
             </div>
 
-            <img src={mapImage} alt="Floor Plan" className="w-full h-full object-contain" />
+            <img ref={imgRef} src={mapImage} alt="Floor Plan" className="w-full h-full object-contain" onLoad={recalcBounds} />
+
+            {/* Overlay wrapper — positioned exactly over the rendered image area */}
+            {imgBounds && <div className="absolute" style={{
+                top: imgBounds.top,
+                left: imgBounds.left,
+                width: imgBounds.width,
+                height: imgBounds.height,
+            }}>
 
             {/* Bounding boxes */}
             {locations?.map((loc, index) => {
@@ -174,7 +215,7 @@ export default function InteriorMapComponent({
                         }}
                     >
                         {(isHovered || isSelected) && (
-                            <div className="absolute -top-7 left-1/2 -translate-x-1/2 flex items-center gap-1 px-2 py-0.5 rounded whitespace-nowrap text-[10px] font-mono font-medium"
+                            <div className="absolute top-full mt-1 left-1/2 -translate-x-1/2 flex items-center gap-1 px-2 py-0.5 rounded whitespace-nowrap text-[10px] font-mono font-medium capitalize"
                                 style={{
                                     background: isDark ? 'rgba(9,9,11,0.95)' : 'rgba(255,255,255,0.95)',
                                     border: isSelected ? '1px solid var(--accent)' : '1px solid var(--border-strong)',
@@ -182,12 +223,143 @@ export default function InteriorMapComponent({
                                     backdropFilter: 'blur(8px)',
                                 }}>
                                 {hasSource && <Eye className="w-2.5 h-2.5" style={{ color: 'var(--accent)' }} />}
-                                {label}
+                                {label.toLowerCase()}
                             </div>
                         )}
                     </div>
                 );
             })}
+
+            {/* Plan execution arrows */}
+            {plan && plan.subtasks.length > 0 && (() => {
+                const order = (plan.execution_order?.length ? plan.execution_order : plan.subtasks.map(s => s.id));
+                const subtaskMap = new Map(plan.subtasks.map(s => [s.id, s]));
+                const waypoints = order
+                    .map(id => subtaskMap.get(id))
+                    .filter((st): st is NonNullable<typeof st> => st != null && st.location != null && (st.location.x !== 0 || st.location.y !== 0))
+                    .map(st => {
+                        const raw = st.action || st.location!.label || st.id;
+                        const capitalized = raw.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+                        return { x: st.location!.x, y: st.location!.y, label: capitalized };
+                    });
+
+                if (waypoints.length < 2) return null;
+
+                const ARROW_COLOR = "#22c55e";
+                const ARROW_COLOR_RGB = "34, 197, 94";
+                const NODE_FILL = "#ffffff";
+                const NODE_BORDER = "#d1d5db";
+                const NODE_TEXT = "#111827";
+
+                const NODE_W = 90;
+                const NODE_H = 32;
+                const ENDPOINT_W = 110;
+                const ENDPOINT_H = 42;
+
+                const lastIdx = waypoints.length - 1;
+
+                return (<>
+                    <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 15 }}>
+                        <defs>
+                            <marker id="plan-arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                                <polygon points="0 0, 10 3.5, 0 7" fill={ARROW_COLOR} />
+                            </marker>
+                            <filter id="plan-arrow-glow">
+                                <feDropShadow dx="0" dy="0" stdDeviation="2" floodColor={`rgb(${ARROW_COLOR_RGB})`} floodOpacity="0.4" />
+                            </filter>
+                            <filter id="node-shadow">
+                                <feDropShadow dx="0" dy="1" stdDeviation="3" floodColor="rgba(0,0,0,0.25)" floodOpacity="0.6" />
+                            </filter>
+                        </defs>
+
+                        {/* Arrows between waypoints */}
+                        {waypoints.map((wp, i) => {
+                            if (i === 0) return null;
+                            const prev = waypoints[i - 1];
+                            const dx = wp.x - prev.x;
+                            const dy = wp.y - prev.y;
+                            const len = Math.sqrt(dx * dx + dy * dy);
+                            if (len === 0) return null;
+
+                            const nx = dx / len;
+                            const ny = dy / len;
+                            const shrinkStart = (i - 1 === 0 || i - 1 === lastIdx) ? 4.0 : 3.0;
+                            const shrinkEnd = (i === lastIdx || i === 0) ? 4.0 : 3.0;
+                            const x1 = prev.x + nx * shrinkStart;
+                            const y1 = prev.y + ny * shrinkStart;
+                            const x2 = wp.x - nx * shrinkEnd;
+                            const y2 = wp.y - ny * shrinkEnd;
+
+                            return (
+                                <line key={`arrow-${i}`}
+                                    x1={`${x1}%`} y1={`${y1}%`}
+                                    x2={`${x2}%`} y2={`${y2}%`}
+                                    stroke={ARROW_COLOR}
+                                    strokeWidth="2.5"
+                                    strokeDasharray="7 4"
+                                    markerEnd="url(#plan-arrowhead)"
+                                    filter="url(#plan-arrow-glow)"
+                                    opacity="0.9"
+                                />
+                            );
+                        })}
+
+                    </svg>
+                    {/* Waypoint nodes (HTML overlay for proper text rendering) */}
+                    {waypoints.map((wp, i) => {
+                        const isStart = i === 0;
+                        const isEnd = i === lastIdx;
+                        const isEndpoint = isStart || isEnd;
+                        const stepNum = i + 1;
+
+                        return (
+                            <div key={`wp-${i}`}
+                                className="absolute flex flex-col items-center justify-center pointer-events-none"
+                                style={{
+                                    left: `${wp.x}%`,
+                                    top: `${wp.y}%`,
+                                    transform: 'translate(-50%, -50%)',
+                                    zIndex: 16,
+                                }}
+                            >
+                                <div
+                                    className="flex flex-col items-center justify-center text-center whitespace-nowrap"
+                                    style={{
+                                        background: NODE_FILL,
+                                        border: `${isEndpoint ? 2.5 : 1.5}px solid ${isEndpoint ? ARROW_COLOR : NODE_BORDER}`,
+                                        borderRadius: 999,
+                                        padding: isEndpoint ? '6px 16px' : '4px 12px',
+                                        boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
+                                        minWidth: isEndpoint ? 100 : 80,
+                                    }}
+                                >
+                                    <span style={{
+                                        color: ARROW_COLOR,
+                                        fontSize: 9,
+                                        fontWeight: 800,
+                                        fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+                                        letterSpacing: 0.5,
+                                        lineHeight: 1.2,
+                                    }}>
+                                        {isStart ? `#${stepNum} START` : isEnd ? `#${stepNum} END` : `#${stepNum}`}
+                                    </span>
+                                    <span style={{
+                                        color: NODE_TEXT,
+                                        fontSize: isEndpoint ? 10 : 9,
+                                        fontWeight: 700,
+                                        fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+                                        lineHeight: 1.2,
+                                    }}>
+                                        {wp.label}
+                                    </span>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </>);
+            })()}
+
+            </div>}
 
             {/* Source image viewer */}
             {viewingSource && sourceImages.length > 0 && (
