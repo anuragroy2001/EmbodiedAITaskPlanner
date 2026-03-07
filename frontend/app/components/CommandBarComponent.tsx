@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Terminal, Send, MessageSquare, Loader2 } from "lucide-react";
+import { Send, MessageSquare, Loader2 } from "lucide-react";
 import { api, SpatialNode, PlannerOutput, PlanSummary } from "../lib/api";
 import { getCookie, setCookie, ROBOT_TYPE_COOKIE } from "../lib/cookies";
 import { HumanoidSvgContent, QuadrupedSvgContent, MobileBaseSvgContent } from "./RobotTypeIcons";
@@ -9,8 +9,8 @@ import InteractivePlanView from "./InteractivePlanView";
 
 const ROBOT_TYPE_OPTIONS = [
   { value: "humanoid" as const, label: "Humanoid", Icon: HumanoidSvgContent },
-  { value: "quadruped" as const, label: "Quadruped", Icon: QuadrupedSvgContent },
-  { value: "mobile_base" as const, label: "Mobile Base", Icon: MobileBaseSvgContent },
+  { value: "quadrupeds" as const, label: "Quadrupeds", Icon: QuadrupedSvgContent },
+  { value: "mobile base" as const, label: "Mobile base", Icon: MobileBaseSvgContent },
 ] as const;
 type RobotTypeValue = (typeof ROBOT_TYPE_OPTIONS)[number]["value"];
 
@@ -24,12 +24,10 @@ export default function CommandBarComponent({ topology, systemLogs, onPlanGenera
     const [chatHistory, setChatHistory] = useState<{ role: 'user' | 'model', text: string }[]>([]);
     const [chatInput, setChatInput] = useState("");
     const [isChatting, setIsChatting] = useState(false);
-    const [showTerminal, setShowTerminal] = useState(false);
     const [robotType, setRobotType] = useState<RobotTypeValue>("humanoid");
     const [latestPlan, setLatestPlan] = useState<PlannerOutput | null>(null);
     const [latestPlanSummary, setLatestPlanSummary] = useState<PlanSummary | null>(null);
     const chatEndRef = useRef<HTMLDivElement>(null);
-    const terminalEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const stored = getCookie(ROBOT_TYPE_COOKIE);
@@ -37,12 +35,6 @@ export default function CommandBarComponent({ topology, systemLogs, onPlanGenera
             setRobotType(stored as RobotTypeValue);
         }
     }, []);
-
-    useEffect(() => {
-        if (terminalEndRef.current) {
-            terminalEndRef.current.scrollIntoView({ behavior: 'smooth' });
-        }
-    }, [systemLogs, showTerminal]);
 
     useEffect(() => {
         if (chatEndRef.current) {
@@ -61,7 +53,7 @@ export default function CommandBarComponent({ topology, systemLogs, onPlanGenera
         setIsChatting(true);
 
         try {
-            const data = await api.planQa(userMsg, topology.node_name, newHistory, robotType);
+            const data = await api.planQa(userMsg, topology.node_name, newHistory);
             if (data.status === "question") {
                 setChatHistory(prev => [...prev, { role: 'model', text: data.text }]);
             } else if (data.status === "plan") {
@@ -94,19 +86,6 @@ export default function CommandBarComponent({ topology, systemLogs, onPlanGenera
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => setShowTerminal(!showTerminal)}
-                        className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium transition-all"
-                        style={{
-                            background: showTerminal ? 'var(--accent-dim)' : 'transparent',
-                            color: showTerminal ? 'var(--accent)' : 'var(--text-muted)',
-                            border: `1px solid ${showTerminal ? 'var(--accent)' : 'var(--border)'}`,
-                        }}
-                    >
-                        <Terminal className="w-2.5 h-2.5" />
-                        LOG
-                    </button>
-
                     {!topology ? (
                         <span className="font-mono text-[10px] px-2 py-0.5 rounded"
                             style={{ color: 'var(--danger)', background: 'rgba(248, 113, 113, 0.08)', border: '1px solid rgba(248, 113, 113, 0.15)' }}>
@@ -124,14 +103,13 @@ export default function CommandBarComponent({ topology, systemLogs, onPlanGenera
             {/* Chat Area */}
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3"
                 style={{ background: 'var(--bg-primary)' }}>
-                {chatHistory.length === 0 && (
+                {!latestPlan && chatHistory.length === 0 && !isChatting && (
                     <div className="text-center my-auto flex flex-col items-center gap-2" style={{ color: 'var(--text-muted)' }}>
                         <MessageSquare className="w-6 h-6 opacity-20" />
                         <p className="text-[13px] font-medium">Describe a task to plan</p>
-                        <p className="text-[11px] font-mono opacity-60">&quot;e.g. Clean the kitchen&quot;</p>
                     </div>
                 )}
-                {chatHistory.map((msg, i) => (
+                {!latestPlan && chatHistory.map((msg, i) => (
                     <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
                         <div className="max-w-[85%] px-3 py-2 rounded-lg text-[13px] leading-relaxed"
                             style={msg.role === 'user'
@@ -143,7 +121,7 @@ export default function CommandBarComponent({ topology, systemLogs, onPlanGenera
                     </div>
                 ))}
                 {isChatting && (
-                    <div className="flex justify-start animate-fade-in">
+                    <div className="flex justify-start animate-fade-in shrink-0">
                         <div className="px-3 py-2 rounded-lg flex items-center gap-2"
                             style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
                             <Loader2 className="w-3 h-3 animate-spin" style={{ color: 'var(--text-muted)' }} />
@@ -157,24 +135,6 @@ export default function CommandBarComponent({ topology, systemLogs, onPlanGenera
                 <div ref={chatEndRef} />
             </div>
 
-            {/* System Log */}
-            {showTerminal && (
-                <div className="h-28 overflow-y-auto px-3 py-2 font-mono text-[10px] space-y-0.5"
-                    style={{ background: 'var(--bg-primary)', borderTop: '1px solid var(--border)', color: 'var(--accent)' }}>
-                    {systemLogs.length === 0 ? (
-                        <div style={{ color: 'var(--text-muted)' }}>Waiting for system events...</div>
-                    ) : (
-                        systemLogs.map((log, i) => (
-                            <div key={i} className="flex gap-2">
-                                <span style={{ color: 'var(--text-muted)' }}>{new Date().toLocaleTimeString()}</span>
-                                <span>{log}</span>
-                            </div>
-                        ))
-                    )}
-                    <div ref={terminalEndRef} />
-                </div>
-            )}
-
             {/* Input */}
             <form onSubmit={handleChatSubmit} className="px-3 py-2.5 flex flex-col gap-2"
                 style={{ borderTop: '1px solid var(--border)' }}>
@@ -183,7 +143,7 @@ export default function CommandBarComponent({ topology, systemLogs, onPlanGenera
                         type="text"
                         value={chatInput}
                         onChange={e => setChatInput(e.target.value)}
-                        placeholder={topology ? "Describe a task to plan..." : "Process a node first"}
+                        placeholder={latestPlan ? "Suggest a follow-up..." : topology ? "Describe a task to plan..." : "Process a node first"}
                         className="flex-1 min-w-0 rounded-lg px-3 py-1.5 text-[13px] transition-colors"
                         style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
                         disabled={isChatting || !topology}

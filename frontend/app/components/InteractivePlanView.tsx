@@ -1,9 +1,31 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import * as d3 from "d3";
-import { ChevronDown, ChevronRight, ListChecks, AlertTriangle, Info } from "lucide-react";
+import React, { useState } from "react";
+import { ChevronDown, ChevronRight, ListChecks, AlertTriangle, Package, MapPin, CheckSquare, Flag } from "lucide-react";
 import type { PlannerOutput, PlanSummary, Subtask } from "../lib/api";
+
+/** Display label for task ID: t1/T1 -> "Task 1", task_1/step_2 -> "Task 1"/"Task 2", else capitalize first letter. */
+export function formatTaskId(id: string): string {
+    if (!id) return id;
+    const trimmed = id.trim();
+    const tMatch = /^t(\d+)$/i.exec(trimmed);
+    if (tMatch) return `Task ${tMatch[1]}`;
+    const prefixMatch = /^(?:task_|step_)(\d+)$/i.exec(trimmed);
+    if (prefixMatch) return `Task ${prefixMatch[1]}`;
+    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+}
+
+/** Display label for action: replace underscores with spaces, capitalize first letter. */
+export function formatAction(action: string): string {
+    if (!action) return action;
+    const withSpaces = action.replace(/_/g, " ");
+    return withSpaces.charAt(0).toUpperCase() + withSpaces.slice(1);
+}
+
+/** Display label for item IDs (objects, locations): same as action – underscores to spaces, capitalize. */
+export function formatItemId(id: string): string {
+    return formatAction(id);
+}
 
 interface InteractivePlanViewProps {
     plan: PlannerOutput;
@@ -21,6 +43,15 @@ function SubtaskCard({ subtask, isExpanded, onToggle }: { subtask: Subtask; isEx
         subtask.location != null ||
         (subtask.preconditions?.length ?? 0) > 0 ||
         (subtask.success_criteria?.length ?? 0) > 0;
+
+    const locationLabel = subtask.location != null
+        ? (subtask.location.label ?? `(${Math.round(subtask.location.x)}, ${Math.round(subtask.location.y)})`)
+        : null;
+    const objectsList = (subtask.objects ?? []).map(formatItemId);
+    const isSingleObjectSameAsLocation =
+        (subtask.objects?.length ?? 0) === 1 &&
+        subtask.location?.label != null &&
+        subtask.objects![0] === subtask.location.label;
 
     return (
         <div
@@ -44,14 +75,30 @@ function SubtaskCard({ subtask, isExpanded, onToggle }: { subtask: Subtask; isEx
                 ) : (
                     <span className="w-3 inline-block" />
                 )}
-                <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-mono text-[10px] font-bold" style={{ color: "var(--accent)" }}>
-                            {subtask.id}
+                            {formatTaskId(subtask.id)}
                         </span>
                         <span className="text-[11px] font-medium" style={{ color: "var(--text-primary)" }}>
-                            {subtask.action}
+                            {formatAction(subtask.action)}
                         </span>
+                        {(subtask.objects?.length ?? 0) > 0 && !isSingleObjectSameAsLocation && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium"
+                                style={{ background: "var(--bg-primary)", color: "var(--text-secondary)", border: "1px solid var(--border)" }}>
+                                <Package className="w-2.5 h-2.5" />
+                                {objectsList.join(", ")}
+                            </span>
+                        )}
+                        {subtask.location != null && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium"
+                                style={{ background: "var(--bg-primary)", color: "var(--text-secondary)", border: "1px solid var(--border)" }}>
+                                <MapPin className="w-2.5 h-2.5" />
+                                {isSingleObjectSameAsLocation
+                                    ? `${objectsList[0]}`
+                                    : formatItemId(subtask.location.label ?? `(${Math.round(subtask.location.x)}, ${Math.round(subtask.location.y)})`)}
+                            </span>
+                        )}
                         {subtask.duration_estimate_sec != null && (
                             <span className="font-mono text-[10px]" style={{ color: "var(--text-muted)" }}>
                                 ~{subtask.duration_estimate_sec}s
@@ -63,139 +110,68 @@ function SubtaskCard({ subtask, isExpanded, onToggle }: { subtask: Subtask; isEx
                     </p>
                     {subtask.depends_on.length > 0 && (
                         <p className="font-mono text-[10px] mt-1" style={{ color: "var(--text-muted)" }}>
-                            after {subtask.depends_on.join(", ")}
+                            after {subtask.depends_on.map(formatTaskId).join(", ")}
                         </p>
                     )}
                 </div>
             </button>
             {hasDetails && isExpanded && (
                 <div
-                    className="px-3 pb-3 pt-0 border-t space-y-2"
+                    className="px-3 pb-3 pt-0 border-t space-y-3"
                     style={{ borderColor: "var(--border)" }}
                 >
-                    {subtask.objects?.length ? (
-                        <div>
-                            <span className="text-[10px] font-semibold uppercase" style={{ color: "var(--text-muted)" }}>Objects</span>
-                            <p className="font-mono text-[11px]" style={{ color: "var(--text-primary)" }}>{subtask.objects.join(", ")}</p>
-                        </div>
-                    ) : null}
-                    {subtask.location != null && (
-                        <div>
-                            <span className="text-[10px] font-semibold uppercase" style={{ color: "var(--text-muted)" }}>Location</span>
-                            <p className="font-mono text-[11px]" style={{ color: "var(--text-primary)" }}>
-                                {subtask.location.label ?? `(${subtask.location.x}, ${subtask.location.y})`}
-                            </p>
+                    {(subtask.objects?.length ?? 0) > 0 && (
+                        <div className="flex gap-2 items-start">
+                            <Package className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: "var(--accent)" }} />
+                            <div>
+                                <p className="text-[10px] font-semibold uppercase mb-0.5" style={{ color: "var(--text-muted)" }}>
+                                    {isSingleObjectSameAsLocation ? "Object & location" : "Objects"}
+                                </p>
+                                <p className="text-[12px]" style={{ color: "var(--text-primary)" }}>
+                                    {objectsList.join(", ")}
+                                </p>
+                            </div>
                         </div>
                     )}
-                    {subtask.preconditions?.length ? (
-                        <div>
-                            <span className="text-[10px] font-semibold uppercase" style={{ color: "var(--text-muted)" }}>Preconditions</span>
-                            <ul className="list-disc list-inside text-[11px]" style={{ color: "var(--text-primary)" }}>
-                                {subtask.preconditions.map((p, i) => (
-                                    <li key={i}>{p}</li>
-                                ))}
-                            </ul>
+                    {subtask.location != null && !isSingleObjectSameAsLocation && (
+                        <div className="flex gap-2 items-start">
+                            <MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: "var(--accent)" }} />
+                            <div>
+                                <p className="text-[10px] font-semibold uppercase mb-0.5" style={{ color: "var(--text-muted)" }}>Location</p>
+                                <p className="text-[12px]" style={{ color: "var(--text-primary)" }}>
+                                    {subtask.location.label != null ? formatItemId(subtask.location.label) : `(${subtask.location.x}, ${subtask.location.y})`}
+                                </p>
+                            </div>
                         </div>
-                    ) : null}
-                    {subtask.success_criteria?.length ? (
-                        <div>
-                            <span className="text-[10px] font-semibold uppercase" style={{ color: "var(--text-muted)" }}>Success criteria</span>
-                            <ul className="list-disc list-inside text-[11px]" style={{ color: "var(--text-primary)" }}>
-                                {subtask.success_criteria.map((s, i) => (
-                                    <li key={i}>{s}</li>
-                                ))}
-                            </ul>
+                    )}
+                    {(subtask.preconditions?.length ?? 0) > 0 && (
+                        <div className="flex gap-2 items-start">
+                            <CheckSquare className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: "var(--accent)" }} />
+                            <div>
+                                <p className="text-[10px] font-semibold uppercase mb-0.5" style={{ color: "var(--text-muted)" }}>Preconditions</p>
+                                <ul className="list-disc list-inside text-[12px] space-y-0.5" style={{ color: "var(--text-primary)" }}>
+                                    {subtask.preconditions!.map((p, i) => (
+                                        <li key={i}>{p}</li>
+                                    ))}
+                                </ul>
+                            </div>
                         </div>
-                    ) : null}
+                    )}
+                    {(subtask.success_criteria?.length ?? 0) > 0 && (
+                        <div className="flex gap-2 items-start">
+                            <Flag className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: "var(--accent)" }} />
+                            <div>
+                                <p className="text-[10px] font-semibold uppercase mb-0.5" style={{ color: "var(--text-muted)" }}>Success criteria</p>
+                                <ul className="list-disc list-inside text-[12px] space-y-0.5" style={{ color: "var(--text-primary)" }}>
+                                    {subtask.success_criteria!.map((s, i) => (
+                                        <li key={i}>{s}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
-        </div>
-    );
-}
-
-function DependencyGraphD3({ plan }: { plan: PlannerOutput }) {
-    const svgRef = useRef<SVGSVGElement>(null);
-    const { nodes: nodeIds, edges } = plan.dependency_graph;
-    const width = 280;
-    const height = 120;
-
-    useEffect(() => {
-        if (!svgRef.current || !nodeIds.length) return;
-
-    // Draw "depends on": edge { source: "t2", target: "t1" } means t2 depends on t1 → show t1 → t2
-        const links = edges.map((e) => ({ source: e.target, target: e.source }));
-        const nodes = nodeIds.map((id) => ({ id, label: id }));
-
-        d3.select(svgRef.current).selectAll("*").remove();
-
-        const simulation = d3
-            .forceSimulation(nodes as any)
-            .force(
-                "link",
-                d3.forceLink(links).id((d: any) => d.id).distance(50)
-            )
-            .force("charge", d3.forceManyBody().strength(-180))
-            .force("center", d3.forceCenter(width / 2, height / 2))
-            .force("collide", d3.forceCollide().radius(20));
-
-        const svg = d3.select(svgRef.current).attr("viewBox", [0, 0, width, height]);
-        const g = svg.append("g");
-
-        const link = g
-            .append("g")
-            .selectAll("line")
-            .data(links)
-            .join("line")
-            .attr("stroke", "var(--border)")
-            .attr("stroke-width", 1);
-
-        const node = g
-            .append("g")
-            .selectAll("g")
-            .data(nodes)
-            .join("g")
-            .attr("cursor", "default");
-
-        node.append("rect")
-            .attr("width", 28)
-            .attr("height", 18)
-            .attr("x", -14)
-            .attr("y", -9)
-            .attr("rx", 3)
-            .attr("fill", "var(--accent-dim)")
-            .attr("stroke", "var(--accent)")
-            .attr("stroke-width", 1);
-
-        node.append("text")
-            .text((d: any) => d.label)
-            .attr("text-anchor", "middle")
-            .attr("dy", 4)
-            .attr("font-family", "monospace")
-            .attr("font-size", "9px")
-            .attr("fill", "var(--text-primary)");
-
-        simulation.on("tick", () => {
-            link
-                .attr("x1", (d: any) => d.source.x)
-                .attr("y1", (d: any) => d.source.y)
-                .attr("x2", (d: any) => d.target.x)
-                .attr("y2", (d: any) => d.target.y);
-            node.attr("transform", (d: any) => `translate(${d.x},${d.y})`);
-        });
-
-        return () => {
-            simulation.stop();
-        };
-    }, [plan.dependency_graph]);
-
-    if (nodeIds.length === 0) return null;
-
-    return (
-        <div className="rounded-lg overflow-hidden" style={{ background: "var(--bg-primary)", border: "1px solid var(--border)" }}>
-            <p className="text-[10px] font-semibold px-2 py-1" style={{ color: "var(--text-muted)" }}>
-                Task dependencies
-            </p>
-            <svg ref={svgRef} width="100%" height={height} style={{ display: "block" }} />
         </div>
     );
 }
@@ -203,7 +179,6 @@ function DependencyGraphD3({ plan }: { plan: PlannerOutput }) {
 export default function InteractivePlanView({ plan, planSummary }: InteractivePlanViewProps) {
     const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
     const [showWarnings, setShowWarnings] = useState(false);
-    const [showTrace, setShowTrace] = useState(false);
 
     const summary = planSummary ?? {
         goal: plan.goal,
@@ -225,7 +200,6 @@ export default function InteractivePlanView({ plan, planSummary }: InteractivePl
     };
 
     const hasWarnings = (plan.warnings?.length ?? 0) > 0;
-    const hasTrace = plan.planner_trace != null;
 
     return (
         <div
@@ -238,36 +212,6 @@ export default function InteractivePlanView({ plan, planSummary }: InteractivePl
                     {summary.goal}
                 </span>
             </div>
-            <p className="text-[10px] font-mono" style={{ color: "var(--text-muted)" }}>
-                {summary.room} · {summary.subtask_count} subtasks, {summary.dependency_count} dependencies
-            </p>
-
-            {order.length > 0 && (
-                <div className="space-y-1.5">
-                    <p className="text-[10px] font-semibold uppercase" style={{ color: "var(--text-muted)" }}>
-                        Execution order
-                    </p>
-                    <div className="flex flex-wrap gap-1">
-                        {order.map((id, i) => (
-                            <span
-                                key={id}
-                                className="font-mono text-[10px] px-1.5 py-0.5 rounded"
-                                style={{
-                                    background: "var(--accent-dim)",
-                                    color: "var(--accent)",
-                                    border: "1px solid var(--border)",
-                                }}
-                            >
-                                {i + 1}. {id}
-                            </span>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {plan.dependency_graph.nodes.length > 0 && (
-                <DependencyGraphD3 plan={plan} />
-            )}
 
             <div className="space-y-2">
                 <p className="text-[10px] font-semibold uppercase" style={{ color: "var(--text-muted)" }}>
@@ -311,29 +255,6 @@ export default function InteractivePlanView({ plan, planSummary }: InteractivePl
                 </div>
             )}
 
-            {hasTrace && (
-                <div className="rounded-lg border" style={{ borderColor: "var(--border)", background: "var(--bg-primary)" }}>
-                    <button
-                        type="button"
-                        onClick={() => setShowTrace(!showTrace)}
-                        className="w-full px-2 py-1.5 flex items-center gap-1.5 text-left"
-                    >
-                        <Info className="w-3 h-3" style={{ color: "var(--text-muted)" }} />
-                        <span className="text-[10px] font-semibold" style={{ color: "var(--text-muted)" }}>
-                            Planner trace
-                        </span>
-                    </button>
-                    {showTrace && plan.planner_trace && (
-                        <div className="px-2 pb-2 font-mono text-[10px] space-y-0.5" style={{ color: "var(--text-muted)" }}>
-                            <p>mode: {plan.planner_trace.mode} · model: {plan.planner_trace.model}</p>
-                            <p>validation_passed: {String(plan.planner_trace.validation_passed)}</p>
-                            {plan.planner_trace.errors?.length ? (
-                                <p style={{ color: "var(--danger)" }}>errors: {plan.planner_trace.errors.join("; ")}</p>
-                            ) : null}
-                        </div>
-                    )}
-                </div>
-            )}
         </div>
     );
 }
