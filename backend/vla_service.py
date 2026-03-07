@@ -21,7 +21,7 @@ from model_config import (
 )
 
 SYSTEM_INSTRUCTION = """You are an advanced Embodied AI and Visual-Language VLA subsystem. 
-Your task is to process images representing a 360-degree view of a single localized environment (a "Node") 
+Your task is to process a sequence of images captured from a single localized environment (a "Node") 
 and extract a structured topological understanding of this space."""
 
 
@@ -80,10 +80,10 @@ Return STRICT JSON with keys: node_name, static_anchors, dynamic_objects, naviga
         if not client:
             raise ValueError("GenAI client not initialized.")
 
-        prompt = """You are an expert architectural draftsperson. Review these 8 images taken from the center of a room looking in 8 directions (N, NE, E, SE, S, SW, W, NW), and the provided spatial data.
+        prompt = """You are an expert architectural draftsperson. Review these sequentially captured images of a room, and the provided spatial data.
 
 Write a highly detailed, strictly textual description of the floor plan.
-Describe the exact shape of the room and the relative 2D positions (North, South, East, West, Center) of all static anchors and dynamic objects.
+Describe the exact shape of the room and the relative 2D positions of all static anchors and dynamic objects.
 Do not describe colors or lighting; focus purely on the 2D geometric layout and object placement.
 
 Spatial data:
@@ -157,14 +157,20 @@ Layout details: {layout_text}"""
 
         objects_to_locate = []
         for a in topology.get("static_anchors", []):
-            objects_to_locate.append({"id": a.get("anchor_id", ""), "type": a.get("type", "")})
+            objects_to_locate.append({
+                "id": a.get("anchor_id", ""),
+                "name": a.get("description", a.get("type", "unknown"))
+            })
         for d in topology.get("dynamic_objects", []):
-            objects_to_locate.append({"id": d.get("object_id", ""), "type": d.get("type", "")})
+            objects_to_locate.append({
+                "id": d.get("object_id", ""),
+                "name": d.get("description", d.get("type", "unknown"))
+            })
 
         if not objects_to_locate:
             return []
 
-        objects_list = "\n".join(f"- {o['id']} ({o['type']})" for o in objects_to_locate)
+        objects_list = "\n".join(f"- {o['id']}: {o['name']}" for o in objects_to_locate)
         prompt = f"""Analyze this floor plan image. Locate the following objects and provide their bounding boxes.
 Objects to locate:
 {objects_list}
@@ -207,7 +213,7 @@ You have access to the following topological data about the current environment:
 
 You are also provided with:
 1. A bird's-eye view floor plan of the room (if available)
-2. The original source photographs captured from the center of the room looking in 8 directions (N, NE, E, SE, S, SW, W, NW)
+2. The original source photographs captured sequentially from within the room
 
 Answer the user's questions about this environment using BOTH the topological data AND the visual information from the images.
 Be concise, helpful, and spatial-aware. When describing locations, reference nearby anchors and edges.
