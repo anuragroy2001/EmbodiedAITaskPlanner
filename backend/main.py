@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 from vla_service import VLAService
 
-app = FastAPI(title="Spatial AI SaaS Backend")
+app = FastAPI(title="Embodied AI Task Planner Backend")
 
 app.add_middleware(
     CORSMiddleware,

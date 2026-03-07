@@ -20,7 +20,7 @@ from model_config import (
     MODEL_CHAT, MODEL_PLANNER
 )
 
-SYSTEM_INSTRUCTION = """You are an advanced Spatial AI and Visual-Language VLA subsystem. 
+SYSTEM_INSTRUCTION = """You are an advanced Embodied AI and Visual-Language VLA subsystem. 
 Your task is to process images representing a 360-degree view of a single localized environment (a "Node") 
 and extract a structured topological understanding of this space."""
 

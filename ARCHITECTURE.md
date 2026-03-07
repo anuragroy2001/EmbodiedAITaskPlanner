@@ -1,6 +1,6 @@
-# SPATIAL_OS: Repository Architecture & Pipeline
+# Embodied AI Task Planner: Repository Architecture & Pipeline
 
-This document summarizes the technical structure and data flow of the Gemini Indoor Navigator project.
+This document summarizes the technical structure and data flow of the Embodied AI Task Planner project.
 
 ## 1. System Architecture (High-Level)
 

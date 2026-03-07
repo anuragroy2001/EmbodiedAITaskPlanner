@@ -1,4 +1,4 @@
-# ??? Spatial OS ? Indoor Navigator Powered by Gemini
+# ??? Embodied AI Task Planner ? Indoor Navigator Powered by Gemini
 
 > **Google Indoor Navigation** ? Capture 8 photos from the center of any room, and Gemini builds you a semantic map you can ask questions about.
 
@@ -6,7 +6,7 @@
 
 ## What Is This?
 
-Spatial OS is a **Vision-Language-Action (VLA)** system that turns ordinary room photos into an interactive indoor map. Think of it as **Google Maps Navigator, but for indoors**.
+Embodied AI Task Planner is a **Vision-Language-Action (VLA)** system that turns ordinary room photos into an interactive indoor map. Think of it as **Google Maps Navigator, but for indoors**.
 
 **How it works:**
 1. ?? Stand in the center of a room and capture **8 directional photos** (N, NE, E, SE, S, SW, W, NW)

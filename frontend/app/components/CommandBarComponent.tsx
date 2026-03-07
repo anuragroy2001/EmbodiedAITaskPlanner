@@ -125,7 +125,7 @@ export default function CommandBarComponent({ topology, systemLogs }: CommandBar
                 <div className="h-32 overflow-y-auto p-3 font-mono text-[10px] space-y-1 animate-in slide-in-from-bottom"
                     style={{ background: 'rgba(0,0,0,0.8)', borderTop: '1px solid var(--border)', color: '#00FF9D' }}>
                     {systemLogs.length === 0 ? (
-                        <div className="opacity-50 italic">Init SPATIAL_OS System Kernel...</div>
+                        <div className="opacity-50 italic">Init EMBODIED_AI System Kernel...</div>
                     ) : (
                         systemLogs.map((log, i) => (
                             <div key={i} className="flex gap-2">

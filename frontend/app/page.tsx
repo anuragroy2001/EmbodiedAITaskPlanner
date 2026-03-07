@@ -81,7 +81,7 @@ export default function Home() {
             </div>
             <div>
               <h1 className="font-mono font-bold tracking-widest" style={{ color: textPrimary, fontSize: '20px' }}>
-                SPATIAL<span style={{ color: accent }}>_OS</span>
+                EMBODIED<span style={{ color: accent }}>_AI</span>
               </h1>
               <p className="font-mono tracking-[0.3em] uppercase" style={{ color: textMuted, fontSize: '10px' }}>
                 SLAM · INDOOR NAVIGATION · ROBOTICS
