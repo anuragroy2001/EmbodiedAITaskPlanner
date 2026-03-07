@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 import { Download } from 'lucide-react';
+import { Download } from 'lucide-react';
 
 interface SpatialNode {
     node_name: string;
@@ -82,6 +83,8 @@ export default function SemanticGraph({ data }: SemanticGraphProps) {
             .join('line')
             .attr('stroke', COLORS.link)
             .attr('stroke-width', 1);
+            .attr('stroke', COLORS.link)
+            .attr('stroke-width', 1);
 
         const node = g.append('g')
             .selectAll('g')
@@ -96,8 +99,16 @@ export default function SemanticGraph({ data }: SemanticGraphProps) {
             const el = d3.select(this);
             const color = COLORS[d.group as keyof typeof COLORS] || COLORS.label;
 
+            const color = COLORS[d.group as keyof typeof COLORS] || COLORS.label;
+
             if (d.group === 'root') {
                 el.append('rect')
+                    .attr('width', 24).attr('height', 24)
+                    .attr('x', -12).attr('y', -12)
+                    .attr('rx', 4)
+                    .attr('fill', color)
+                    .attr('fill-opacity', 0.15)
+                    .attr('stroke', color)
                     .attr('width', 24).attr('height', 24)
                     .attr('x', -12).attr('y', -12)
                     .attr('rx', 4)
@@ -125,12 +136,34 @@ export default function SemanticGraph({ data }: SemanticGraphProps) {
             }
         });
 
+                    .attr('r', 5)
+                    .attr('fill', color)
+                    .attr('fill-opacity', 0.2)
+                    .attr('stroke', color)
+                    .attr('stroke-width', 1);
+            } else {
+                const size = d.group === 'anchor' ? 18 : 14;
+                el.append('rect')
+                    .attr('width', size).attr('height', size)
+                    .attr('x', -size / 2).attr('y', -size / 2)
+                    .attr('rx', 3)
+                    .attr('fill', color)
+                    .attr('fill-opacity', 0.15)
+                    .attr('stroke', color)
+                    .attr('stroke-width', 1);
+            }
+        });
+
         node.append('text')
             .text((d: any) => d.label)
             .attr('x', 16)
+            .attr('x', 16)
             .attr('y', 4)
             .attr('font-family', "'IBM Plex Mono', monospace")
+            .attr('font-family', "'IBM Plex Mono', monospace")
             .attr('font-size', '10px')
+            .attr('font-weight', '500')
+            .attr('fill', COLORS.label);
             .attr('font-weight', '500')
             .attr('fill', COLORS.label);
 
@@ -177,6 +210,7 @@ export default function SemanticGraph({ data }: SemanticGraphProps) {
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
         ctx.fillStyle = COLORS.bg;
+        ctx.fillStyle = COLORS.bg;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         const img = new Image();
         img.onload = () => {
@@ -191,7 +225,11 @@ export default function SemanticGraph({ data }: SemanticGraphProps) {
 
     return (
         <div className="w-full h-full relative overflow-hidden min-h-[420px]" style={{ background: COLORS.bg }}>
+        <div className="w-full h-full relative overflow-hidden min-h-[420px]" style={{ background: COLORS.bg }}>
             <button onClick={handleDownload}
+                className="absolute top-3 right-3 z-20 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-medium transition-all hover:scale-[1.02]"
+                style={{ background: 'rgba(9,9,11,0.9)', border: '1px solid var(--border-strong)', color: 'var(--text-secondary)', backdropFilter: 'blur(8px)' }}>
+                <Download className="w-3 h-3" /> Save
                 className="absolute top-3 right-3 z-20 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-medium transition-all hover:scale-[1.02]"
                 style={{ background: 'rgba(9,9,11,0.9)', border: '1px solid var(--border-strong)', color: 'var(--text-secondary)', backdropFilter: 'blur(8px)' }}>
                 <Download className="w-3 h-3" /> Save
@@ -200,6 +238,20 @@ export default function SemanticGraph({ data }: SemanticGraphProps) {
             <svg ref={svgRef} className="w-full h-full absolute inset-0" />
 
             {/* Legend */}
+            <div className="absolute bottom-3 left-3 flex gap-3 px-3 py-2 rounded-lg text-[10px] font-mono z-10"
+                style={{ background: 'rgba(9,9,11,0.85)', border: '1px solid var(--border)', backdropFilter: 'blur(8px)' }}>
+                {[
+                    { color: COLORS.root, label: 'Node', shape: 'rect' },
+                    { color: COLORS.anchor, label: 'Anchor', shape: 'rect' },
+                    { color: COLORS.object, label: 'Object', shape: 'rect' },
+                    { color: COLORS.edge, label: 'Edge', shape: 'circle' },
+                ].map(item => (
+                    <div key={item.label} className="flex items-center gap-1.5">
+                        <div className={`w-2 h-2 ${item.shape === 'circle' ? 'rounded-full' : 'rounded-[2px]'}`}
+                            style={{ background: item.color, opacity: 0.7 }} />
+                        <span style={{ color: 'var(--text-muted)' }}>{item.label}</span>
+                    </div>
+                ))}
             <div className="absolute bottom-3 left-3 flex gap-3 px-3 py-2 rounded-lg text-[10px] font-mono z-10"
                 style={{ background: 'rgba(9,9,11,0.85)', border: '1px solid var(--border)', backdropFilter: 'blur(8px)' }}>
                 {[

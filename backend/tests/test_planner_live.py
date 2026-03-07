@@ -177,6 +177,7 @@ def main():
             goal=goal,
             node_name=node_name,
             use_mock=False,
+            robot_type="humanoid",
         )
     except Exception as e:
         print(f"Planner failed: {e}")
@@ -200,6 +201,23 @@ def main():
         print("  warnings:", result.warnings)
     print()
     print("Live Gemini test passed.")
+
+    # Exercise robot_type wiring with quadruped (optional second run)
+    print()
+    print("Calling planner with robot_type=quadruped...")
+    try:
+        result2 = generate_task_dag(
+            topology=topology,
+            locations=locations,
+            goal="Navigate to the sink and back",
+            node_name=node_name,
+            use_mock=False,
+            robot_type="quadruped",
+        )
+        print(f"  task_id: {result2.task_id}, subtasks: {len(result2.subtasks)}")
+        print("Quadruped robot_type test passed.")
+    except Exception as e:
+        print(f"Quadruped run failed (non-fatal): {e}")
 
 if __name__ == "__main__":
     main()

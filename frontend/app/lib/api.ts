@@ -97,6 +97,17 @@ export const api = {
         return data;
     },
 
+    planQa: async (message: string, nodeName: string, history: { role: string; text: string }[]): Promise<PlanQAResponse> => {
+        const res = await fetch(`${API_BASE_URL}/plan-qa`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message, node_name: nodeName, history }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Plan QA request failed");
+        return data;
+    },
+
     getNodeImages: async (nodeName: string) => {
         const res = await fetch(`${API_BASE_URL}/node/${encodeURIComponent(nodeName)}/images`);
         return res.json();

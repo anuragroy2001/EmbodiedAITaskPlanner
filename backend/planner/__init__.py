@@ -8,6 +8,7 @@ from .planner_schemas import (
     TaskLocation,
     DependencyGraph,
     ValidationResult,
+    RobotType,
 )
 from .planner_service import generate_task_dag
 
@@ -19,5 +20,6 @@ __all__ = [
     "TaskLocation",
     "DependencyGraph",
     "ValidationResult",
+    "RobotType",
     "generate_task_dag",
 ]
