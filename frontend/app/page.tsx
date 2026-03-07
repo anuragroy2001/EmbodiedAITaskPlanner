@@ -1,269 +1,323 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { SpatialNode, ObjectLocation, api } from './lib/api';
-import NodeCaptureComponent from "./components/NodeCaptureComponent";
-import CommandBarComponent from "./components/CommandBarComponent";
-import InteriorMapComponent from "./components/InteriorMapComponent";
-import SemanticGraph from "./components/SemanticGraph";
-import DigitalTwin from "./components/DigitalTwin";
-import RobotSettingsModal from "./components/RobotSettingsModal";
-import { Settings } from "lucide-react";
+import { useEffect } from "react";
+import Link from "next/link";
+import { motion } from "framer-motion";
+import {
+  ArrowRight,
+  Camera,
+  Map,
+  Scan,
+  Cpu,
+  Github,
+  Mail,
+} from "lucide-react";
 
-export default function Home() {
-  const [topology, setTopology] = useState<SpatialNode | null>(null);
-  const [mapImage, setMapImage] = useState<string | null>(null);
-  const [locations, setLocations] = useState<ObjectLocation[]>([]);
-  const [sourceImages, setSourceImages] = useState<string[]>([]);
-  const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'MAP' | 'GRAPH' | 'TWIN'>('MAP');
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
-  const [fontSize, setFontSize] = useState<'S' | 'M' | 'L'>('M');
-  const [robotApiUrl, setRobotApiUrl] = useState("http://localhost:8080/nav2/follow_waypoints");
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [systemLogs, setSystemLogs] = useState<string[]>([]);
-
-  const fontSizeMap = { S: '13pt', M: '14pt', L: '16pt' };
-
-  const addSystemLog = (msg: string) => {
-    setSystemLogs(prev => [...prev, msg]);
-  };
-
+export default function LandingPage() {
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    document.body.style.background = theme === 'dark' ? '#030712' : '#f1f5f9';
-    document.body.style.color = theme === 'dark' ? '#e2e8f0' : '#0f172a';
-  }, [theme]);
-
-  const handleAnalysisComplete = async (newTopology: SpatialNode, newMapImage: string, newLocations: ObjectLocation[]) => {
-    setTopology(newTopology);
-    setMapImage(newMapImage);
-    setLocations(newLocations);
-    try {
-      const imgData = await api.getNodeImages(newTopology.node_name);
-      setSourceImages(imgData.images || []);
-    } catch (err) {
-      console.error("Failed to fetch source images:", err);
-    }
-  };
-
-  const isDark = theme === 'dark';
-
-  // Theme-aware colors
-  const bg = isDark ? '#030712' : '#f1f5f9';
-  const cardBg = isDark ? 'rgba(10, 22, 40, 0.6)' : 'rgba(255, 255, 255, 0.85)';
-  const border = isDark ? 'rgba(0, 255, 157, 0.12)' : 'rgba(0, 100, 60, 0.15)';
-  const borderStrong = isDark ? 'rgba(0, 255, 157, 0.3)' : 'rgba(0, 100, 60, 0.3)';
-  const accent = isDark ? '#00FF9D' : '#059669';
-  const accentDim = isDark ? 'rgba(0, 255, 157, 0.15)' : 'rgba(5, 150, 105, 0.1)';
-  const textPrimary = isDark ? '#e2e8f0' : '#0f172a';
-  const textMuted = isDark ? '#64748b' : '#6b7280';
-  const visBg = isDark ? '#000' : '#f5f5f5';
+    document.documentElement.removeAttribute("data-theme");
+  }, []);
 
   return (
-    <div className="grid-bg min-h-screen transition-all duration-500"
-      style={{ fontSize: fontSizeMap[fontSize], background: bg, color: textPrimary }}>
+    <div className="landing-bg min-h-screen">
+      <div className="hero-gradient" />
+      <div className="grid-overlay" />
 
-      {/* ═══════════════════ HEADER ═══════════════════ */}
-      <header className="relative overflow-hidden" style={{ borderBottom: `1px solid ${border}` }}>
-        <div className="scan-line" />
-
-        <div className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between relative z-10">
-          {/* Logo & Title */}
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center font-mono font-black"
-                style={{ background: accentDim, color: accent, border: `1px solid ${borderStrong}`, fontSize: '18px' }}>
-                S<span style={{ fontSize: '10px', verticalAlign: 'super' }}>OS</span>
+      <div className="relative z-10">
+        {/* ─── NAVBAR ─── */}
+        <nav className="fixed top-0 left-0 right-0 z-50" style={{
+          background: "rgba(12, 12, 12, 0.7)",
+          backdropFilter: "blur(20px) saturate(1.4)",
+          WebkitBackdropFilter: "blur(20px) saturate(1.4)",
+          borderBottom: "1px solid rgba(255, 255, 255, 0.04)",
+        }}>
+          <div className="max-w-[1200px] mx-auto px-6 md:px-10 h-[72px] flex items-center justify-between">
+            <Link href="/" className="flex items-center gap-3 group">
+              <div
+                className="w-9 h-9 rounded-xl flex items-center justify-center font-display font-bold text-[13px] animate-glow-breathe"
+                style={{
+                  background: "rgba(255, 255, 255, 0.05)",
+                  color: "#ffffff",
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                }}
+              >
+                E
               </div>
-              <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full pulse-dot"
-                style={{ background: accent }} />
+              <span className="text-[17px] font-bold tracking-[-0.02em] text-white">
+                EmbodiedAI
+              </span>
+            </Link>
+
+            <Link
+              href="/dashboard"
+              className="cta-button text-[13px] font-semibold"
+              style={{
+                padding: "10px 24px",
+                borderRadius: "14px",
+                background: "#ffffff",
+                color: "#0c0c0c",
+                boxShadow: "0 2px 20px rgba(255, 255, 255, 0.08)",
+              }}
+            >
+              Launch App
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </nav>
+
+        {/* ─── HERO ─── */}
+        <section className="relative pt-[160px] pb-[120px] md:pt-[200px] md:pb-[160px] px-6 md:px-10">
+          <div className="hero-glow" />
+          <div className="max-w-[1200px] mx-auto text-center">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <div
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8 text-[13px] font-medium"
+                style={{
+                  background: "rgba(255, 255, 255, 0.04)",
+                  border: "1px solid rgba(255, 255, 255, 0.08)",
+                  color: "#aaaaaa",
+                }}
+              >
+                <Cpu className="w-3.5 h-3.5" />
+                Spatial Intelligence for Embodied AI
+              </div>
+            </motion.div>
+
+            <motion.h1
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 1, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+              className="text-[48px] md:text-[72px] lg:text-[84px] font-black tracking-[-0.04em] leading-[1.05] mb-8"
+            >
+              <span className="text-white">We teach robots</span>
+              <br />
+              <span className="text-gradient">to understand space.</span>
+            </motion.h1>
+
+            <motion.p
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
+              className="text-[18px] md:text-[20px] leading-[1.7] max-w-[640px] mx-auto mb-12"
+              style={{ color: "#999999" }}
+            >
+              Turn a walkthrough into a navigable spatial map. Our vision-language
+              pipeline builds floor plans, semantic graphs, and 3D digital twins
+              — enabling autonomous robots to reason about the world around them.
+            </motion.p>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
+              className="flex flex-col sm:flex-row items-center justify-center gap-4"
+            >
+              <Link href="/dashboard" className="cta-button cta-button-primary">
+                Get Started
+                <ArrowRight className="w-5 h-5" />
+              </Link>
+              <a
+                href="https://github.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="cta-button cta-button-secondary"
+              >
+                <Github className="w-5 h-5" />
+                View on GitHub
+              </a>
+            </motion.div>
+          </div>
+
+          {/* Hero visual element */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 40 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 1.2, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            className="max-w-[900px] mx-auto mt-20"
+          >
+            <div
+              className="glass-card p-1 overflow-hidden"
+              style={{
+                boxShadow: "0 20px 80px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.04)",
+              }}
+            >
+              <div
+                className="rounded-[20px] overflow-hidden"
+                style={{
+                  background: "linear-gradient(135deg, #111111 0%, #1a1a1a 50%, #111111 100%)",
+                  border: "1px solid rgba(255, 255, 255, 0.03)",
+                }}
+              >
+                <div className="p-6 md:p-10">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-3 h-3 rounded-full" style={{ background: "#555" }} />
+                    <div className="w-3 h-3 rounded-full" style={{ background: "#777" }} />
+                    <div className="w-3 h-3 rounded-full" style={{ background: "#999" }} />
+                    <span className="text-[12px] font-mono ml-3" style={{ color: "#555" }}>
+                      EmbodiedAI Dashboard
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="col-span-1 space-y-4">
+                      <div
+                        className="rounded-xl p-4 h-28"
+                        style={{
+                          background: "rgba(255, 255, 255, 0.02)",
+                          border: "1px solid rgba(255, 255, 255, 0.06)",
+                        }}
+                      >
+                        <div className="flex items-center gap-2 mb-3">
+                          <Camera className="w-4 h-4" style={{ color: "#888" }} />
+                          <span className="text-[11px] font-semibold" style={{ color: "#888" }}>
+                            Spatial Capture
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {[...Array(6)].map((_, i) => (
+                            <div
+                              key={i}
+                              className="aspect-square rounded-md"
+                              style={{
+                                background: `rgba(255, 255, 255, ${0.03 + i * 0.01})`,
+                                border: "1px solid rgba(255, 255, 255, 0.04)",
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      <div
+                        className="rounded-xl p-4 h-24"
+                        style={{
+                          background: "rgba(255, 255, 255, 0.02)",
+                          border: "1px solid rgba(255, 255, 255, 0.06)",
+                        }}
+                      >
+                        <div className="flex items-center gap-2 mb-2">
+                          <Scan className="w-4 h-4" style={{ color: "#888" }} />
+                          <span className="text-[11px] font-semibold" style={{ color: "#888" }}>
+                            Pipeline
+                          </span>
+                        </div>
+                        <div className="space-y-1.5">
+                          {[1, 2, 3].map(i => (
+                            <div key={i} className="flex items-center gap-2">
+                              <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#666" }} />
+                              <div className="h-1.5 rounded-full flex-1" style={{ background: "rgba(255, 255, 255, 0.06)" }} />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <div
+                      className="col-span-2 rounded-xl p-6 min-h-[200px] flex items-center justify-center"
+                      style={{
+                        background: "rgba(0, 0, 0, 0.4)",
+                        border: "1px solid rgba(255, 255, 255, 0.04)",
+                      }}
+                    >
+                      <div className="text-center">
+                        <Map className="w-10 h-10 mx-auto mb-3 animate-float" style={{ color: "#555", opacity: 0.6 }} />
+                        <p className="text-[13px] font-medium" style={{ color: "#555" }}>
+                          Spatial visualization area
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div>
-              <h1 className="font-mono font-bold tracking-widest" style={{ color: textPrimary, fontSize: '20px' }}>
-                EMBODIED<span style={{ color: accent }}>_AI</span>
-              </h1>
-              <p className="font-mono tracking-[0.3em] uppercase" style={{ color: textMuted, fontSize: '10px' }}>
-                SLAM · INDOOR NAVIGATION · ROBOTICS
+          </motion.div>
+        </section>
+
+        {/* ─── FOOTER ─── */}
+        <footer
+          style={{
+            borderTop: "1px solid rgba(255, 255, 255, 0.04)",
+            background: "rgba(12, 12, 12, 0.9)",
+            backdropFilter: "blur(16px)",
+          }}
+        >
+          <div className="max-w-[1200px] mx-auto px-6 md:px-10 py-12 md:py-16">
+            <div className="flex flex-col md:flex-row items-start justify-between gap-10 mb-12">
+              <div>
+                <div className="flex items-center gap-3 mb-4">
+                  <div
+                    className="w-9 h-9 rounded-xl flex items-center justify-center font-display font-bold text-[13px]"
+                    style={{
+                      background: "rgba(255, 255, 255, 0.05)",
+                      color: "#ffffff",
+                      border: "1px solid rgba(255, 255, 255, 0.1)",
+                    }}
+                  >
+                    E
+                  </div>
+                  <span className="text-[17px] font-bold text-white tracking-[-0.02em]">
+                    EmbodiedAITaskPlanner
+                  </span>
+                </div>
+                <p className="text-[14px] leading-[1.7] max-w-[300px]" style={{ color: "#666" }}>
+                  Indoor spatial intelligence for embodied AI and autonomous
+                  navigation.
+                </p>
+              </div>
+
+              <div className="flex gap-16">
+                <div>
+                  <h4 className="text-[13px] font-bold text-white mb-4 tracking-wide uppercase">
+                    Platform
+                  </h4>
+                  <div className="flex flex-col gap-3">
+                    <Link href="/dashboard" className="text-[14px] hover:text-white transition-colors" style={{ color: "#888" }}>
+                      Dashboard
+                    </Link>
+                  </div>
+                </div>
+                <div>
+                  <h4 className="text-[13px] font-bold text-white mb-4 tracking-wide uppercase">
+                    Connect
+                  </h4>
+                  <div className="flex flex-col gap-3">
+                    <a
+                      href="https://github.com"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[14px] hover:text-white transition-colors flex items-center gap-2"
+                      style={{ color: "#888" }}
+                    >
+                      <Github className="w-4 h-4" />
+                      GitHub
+                    </a>
+                    <a
+                      href="mailto:contact@embodiedai.dev"
+                      className="text-[14px] hover:text-white transition-colors flex items-center gap-2"
+                      style={{ color: "#888" }}
+                    >
+                      <Mail className="w-4 h-4" />
+                      Contact
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div
+              className="pt-8 flex flex-col md:flex-row items-center justify-between gap-4"
+              style={{ borderTop: "1px solid rgba(255, 255, 255, 0.04)" }}
+            >
+              <p className="text-[13px]" style={{ color: "#555" }}>
+                &copy; {new Date().getFullYear()} EmbodiedAITaskPlanner. All rights reserved.
+              </p>
+              <p className="text-[13px] italic" style={{ color: "#555" }}>
+                Spatial intelligence, unbounded.
               </p>
             </div>
           </div>
-
-          {/* Controls */}
-          <div className="flex items-center gap-3">
-            {/* Font Sizer */}
-            <div className="rounded-lg p-0.5 flex" style={{ background: cardBg, border: `1px solid ${border}`, backdropFilter: 'blur(16px)' }}>
-              {(['S', 'M', 'L'] as const).map(s => (
-                <button key={s} onClick={() => setFontSize(s)}
-                  className="px-2.5 py-1 rounded font-mono font-bold transition-all"
-                  style={{ background: fontSize === s ? accent : 'transparent', color: fontSize === s ? '#000' : textMuted }}>
-                  {s}
-                </button>
-              ))}
-            </div>
-
-            {/* Theme Toggle */}
-            <button onClick={() => setTheme(isDark ? 'light' : 'dark')}
-              className="w-9 h-9 rounded-lg flex items-center justify-center transition-all hover:scale-105"
-              style={{ background: cardBg, border: `1px solid ${border}`, backdropFilter: 'blur(16px)', fontSize: '16px' }}>
-              {isDark ? '☀️' : '🌙'}
-            </button>
-
-            {/* Settings Gear */}
-            <button onClick={() => setIsSettingsOpen(true)}
-              className="w-9 h-9 rounded-lg flex items-center justify-center transition-all hover:scale-105"
-              style={{ background: cardBg, border: `1px solid ${border}`, backdropFilter: 'blur(16px)' }}>
-              <Settings className="w-5 h-5" style={{ color: textPrimary }} />
-            </button>
-
-            {/* Status */}
-            <div className="hidden md:flex rounded-lg items-center gap-2 px-3 py-1.5"
-              style={{ background: cardBg, border: `1px solid ${border}`, backdropFilter: 'blur(16px)' }}>
-              <span className="w-2 h-2 rounded-full pulse-dot" style={{ background: accent }} />
-              <span className="font-mono font-bold uppercase" style={{ color: accent, fontSize: '10px', letterSpacing: '0.15em' }}>
-                VLA ONLINE
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Gradient edge */}
-        <div className="absolute bottom-0 left-0 right-0 h-px"
-          style={{ background: `linear-gradient(90deg, transparent, ${accent}, transparent)` }} />
-      </header>
-
-      {/* ═══════════════════ MAIN ═══════════════════ */}
-      <main className="max-w-7xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
-
-        {/* ─── Left: Node Capture ─── */}
-        <div className="lg:col-span-4 flex flex-col gap-6">
-          <div className="rounded-2xl p-6" style={{ background: cardBg, border: `1px solid ${border}`, backdropFilter: 'blur(16px)' }}>
-            <div className="flex items-center gap-2 mb-4 pb-3" style={{ borderBottom: `1px solid ${border}` }}>
-              <span>📸</span>
-              <h2 className="font-mono font-bold uppercase tracking-wider">Node Capture</h2>
-            </div>
-            <NodeCaptureComponent onAnalysisComplete={handleAnalysisComplete} />
-          </div>
-
-          {/* Info Card */}
-          <div className="rounded-2xl p-5" style={{ background: cardBg, border: `1px solid ${border}`, backdropFilter: 'blur(16px)' }}>
-            <div className="flex items-center gap-2 mb-3">
-              <span>🤖</span>
-              <span className="font-mono font-bold uppercase" style={{ color: accent }}>How It Works</span>
-            </div>
-            <ol className="flex flex-col gap-2 font-mono" style={{ color: textMuted }}>
-              <li className="flex gap-2"><span style={{ color: accent }}>01</span> Stand at room center, take 8 directional photos</li>
-              <li className="flex gap-2"><span style={{ color: accent }}>02</span> AI extracts topology — objects, anchors, exits</li>
-              <li className="flex gap-2"><span style={{ color: accent }}>03</span> Text-Bridge converts photos to layout description</li>
-              <li className="flex gap-2"><span style={{ color: accent }}>04</span> Generates 2D bird&apos;s-eye floor plan from text</li>
-              <li className="flex gap-2"><span style={{ color: accent }}>05</span> Ask spatial queries: &quot;Where is the coffee pot?&quot;</li>
-            </ol>
-          </div>
-        </div>
-
-        {/* ─── Right: Visualizations ─── */}
-        <div className="lg:col-span-8 flex flex-col gap-6">
-
-          {/* Visualization Panel */}
-          <div className="rounded-2xl overflow-hidden flex flex-col min-h-[500px]"
-            style={{ background: cardBg, border: `1px solid ${border}`, backdropFilter: 'blur(16px)' }}>
-            {topology ? (
-              <>
-                {/* Tab Bar */}
-                <div className="px-5 py-3 flex items-center justify-between"
-                  style={{ borderBottom: `1px solid ${border}`, background: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.03)' }}>
-                  <div className="flex items-center gap-2">
-                    <span>
-                      {viewMode === 'MAP' && '🗺️'}
-                      {viewMode === 'GRAPH' && '🔗'}
-                      {viewMode === 'TWIN' && '🧊'}
-                    </span>
-                    <h2 className="font-mono font-bold uppercase tracking-wider">
-                      {viewMode === 'MAP' && 'Interactive Floor Plan'}
-                      {viewMode === 'GRAPH' && 'Semantic Topology'}
-                      {viewMode === 'TWIN' && 'Digital Twin 3D'}
-                    </h2>
-                    <span className="font-mono px-2 py-0.5 rounded-full"
-                      style={{ fontSize: '10px', background: accentDim, color: accent, border: `1px solid ${border}` }}>
-                      {topology.node_name}
-                    </span>
-                  </div>
-
-                  <div className="flex rounded-xl p-0.5" style={{ background: isDark ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0.05)', border: `1px solid ${border}` }}>
-                    {[
-                      { key: 'MAP', label: 'MAP', color: accent },
-                      { key: 'GRAPH', label: 'GRAPH', color: '#A855F7' },
-                      { key: 'TWIN', label: 'TWIN', color: '#EC4899' },
-                    ].map(tab => (
-                      <button key={tab.key} onClick={() => setViewMode(tab.key as any)}
-                        className="px-4 py-1.5 rounded-lg font-mono font-bold transition-all"
-                        style={{
-                          background: viewMode === tab.key ? tab.color : 'transparent',
-                          color: viewMode === tab.key ? '#000' : textMuted,
-                          letterSpacing: '0.1em'
-                        }}>
-                        {tab.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Content Area */}
-                <div className="relative w-full flex-1" style={{ background: visBg }}>
-                  {viewMode === 'MAP' && mapImage && (
-                    <InteriorMapComponent
-                      mapImage={mapImage} locations={locations} topology={topology}
-                      sourceImages={sourceImages} selectedObjectId={selectedObjectId}
-                      onSelectObject={setSelectedObjectId} theme={theme}
-                      robotApiUrl={robotApiUrl} onAddSystemLog={addSystemLog}
-                    />
-                  )}
-                  {viewMode === 'GRAPH' && <SemanticGraph data={topology} />}
-                  {viewMode === 'TWIN' && mapImage && (
-                    <DigitalTwin mapImage={mapImage} locations={locations} topology={topology}
-                      selectedObjectId={selectedObjectId} onSelectObject={setSelectedObjectId}
-                    />
-                  )}
-                </div>
-              </>
-            ) : (
-              /* Empty State */
-              <div className="flex-1 flex flex-col items-center justify-center p-12 text-center min-h-[500px]">
-                <div className="relative mb-6">
-                  <div className="w-20 h-20 rounded-2xl flex items-center justify-center"
-                    style={{ background: accentDim, border: `2px dashed ${borderStrong}`, fontSize: '32px' }}>
-                    🔭
-                  </div>
-                </div>
-                <h3 className="font-mono font-bold uppercase tracking-wider mb-2">
-                  Awaiting Spatial Data
-                </h3>
-                <p className="font-mono max-w-xs leading-relaxed" style={{ color: textMuted }}>
-                  Upload 8 directional images and synthesize to generate your indoor navigation map.
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* Chat Panel */}
-          <CommandBarComponent topology={topology} systemLogs={systemLogs} />
-        </div>
-      </main>
-
-      {/* ═══════════════════ FOOTER ═══════════════════ */}
-      <footer className="py-4" style={{ borderTop: `1px solid ${border}` }}>
-        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between font-mono" style={{ color: textMuted }}>
-          <span>Embodied AI Task Planner</span>
-          <span>Powered by Gemini VLA · Text-Bridge Architecture</span>
-        </div>
-      </footer>
-      {/* Settings Modal */}
-      <RobotSettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        apiUrl={robotApiUrl}
-        onSave={setRobotApiUrl}
-      />
+        </footer>
+      </div>
     </div>
   );
 }

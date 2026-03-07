@@ -2,8 +2,8 @@
 
 import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
+import { Download } from 'lucide-react';
 
-// Interface matching the backend VLA result
 interface SpatialNode {
     node_name: string;
     static_anchors: { anchor_id: string; type: string; description: string; image_indices: number[] }[];
@@ -15,6 +15,16 @@ interface SemanticGraphProps {
     data: SpatialNode;
 }
 
+const COLORS = {
+    root: '#67E8F9',
+    anchor: '#818CF8',
+    object: '#FDE68A',
+    edge: '#F87171',
+    link: 'rgba(255, 255, 255, 0.08)',
+    label: '#A1A1AA',
+    bg: '#020108',
+};
+
 export default function SemanticGraph({ data }: SemanticGraphProps) {
     const svgRef = useRef<SVGSVGElement>(null);
 
@@ -24,33 +34,27 @@ export default function SemanticGraph({ data }: SemanticGraphProps) {
         const width = svgRef.current.clientWidth || 800;
         const height = svgRef.current.clientHeight || 500;
 
-        // Clear previous graph
         d3.select(svgRef.current).selectAll('*').remove();
 
         const svg = d3.select(svgRef.current)
             .attr('viewBox', [0, 0, width, height]);
 
-        // Prepare graph data
         const nodes: any[] = [];
         const links: any[] = [];
 
-        // Root node
         const rootId = data.node_name;
         nodes.push({ id: rootId, group: 'root', label: data.node_name });
 
-        // Static Anchors
         data.static_anchors?.forEach(anchor => {
             nodes.push({ id: anchor.anchor_id, group: 'anchor', label: anchor.type });
             links.push({ source: rootId, target: anchor.anchor_id, type: 'contains' });
         });
 
-        // Dynamic Objects
         data.dynamic_objects?.forEach(obj => {
             nodes.push({ id: obj.object_id, group: 'object', label: obj.type });
             links.push({ source: rootId, target: obj.object_id, type: 'contains' });
         });
 
-        // Navigable Edges
         data.navigable_edges?.forEach(edge => {
             nodes.push({ id: edge.edge_id, group: 'edge', label: edge.description });
             links.push({ source: rootId, target: edge.edge_id, type: 'connects' });
@@ -62,10 +66,8 @@ export default function SemanticGraph({ data }: SemanticGraphProps) {
             .force('center', d3.forceCenter(width / 2, height / 2))
             .force('collide', d3.forceCollide().radius(40));
 
-        // Add a group for zooming
         const g = svg.append('g');
 
-        // Zoom behavior
         const zoom = d3.zoom<SVGSVGElement, unknown>()
             .scaleExtent([0.1, 4])
             .on('zoom', (event) => {
@@ -74,16 +76,13 @@ export default function SemanticGraph({ data }: SemanticGraphProps) {
 
         svg.call(zoom);
 
-        // Draw links
         const link = g.append('g')
-            .attr('stroke', '#555')
-            .attr('stroke-opacity', 0.6)
             .selectAll('line')
             .data(links)
             .join('line')
-            .attr('stroke-width', 1.5);
+            .attr('stroke', COLORS.link)
+            .attr('stroke-width', 1);
 
-        // Draw nodes
         const node = g.append('g')
             .selectAll('g')
             .data(nodes)
@@ -93,51 +92,47 @@ export default function SemanticGraph({ data }: SemanticGraphProps) {
                 .on('drag', dragged)
                 .on('end', dragended));
 
-        // Node shapes based on group
         node.each(function (d: any) {
             const el = d3.select(this);
+            const color = COLORS[d.group as keyof typeof COLORS] || COLORS.label;
+
             if (d.group === 'root') {
                 el.append('rect')
-                    .attr('width', 30)
-                    .attr('height', 30)
-                    .attr('x', -15)
-                    .attr('y', -15)
-                    .attr('fill', '#A020F0')
-                    .attr('stroke', '#fff')
-                    .attr('stroke-width', 2);
-            } else if (d.group === 'anchor') {
-                el.append('rect')
-                    .attr('width', 20)
-                    .attr('height', 20)
-                    .attr('x', -10)
-                    .attr('y', -10)
-                    .attr('fill', '#008000')
-                    .attr('stroke', '#fff')
+                    .attr('width', 24).attr('height', 24)
+                    .attr('x', -12).attr('y', -12)
+                    .attr('rx', 4)
+                    .attr('fill', color)
+                    .attr('fill-opacity', 0.15)
+                    .attr('stroke', color)
                     .attr('stroke-width', 1.5);
-            } else if (d.group === 'object') {
-                el.append('rect')
-                    .attr('width', 16)
-                    .attr('height', 16)
-                    .attr('x', -8)
-                    .attr('y', -8)
-                    .attr('fill', '#FFA500')
-                    .attr('stroke', '#fff')
-                    .attr('stroke-width', 1);
             } else if (d.group === 'edge') {
                 el.append('circle')
-                    .attr('r', 6)
-                    .attr('fill', '#FF0000');
+                    .attr('r', 5)
+                    .attr('fill', color)
+                    .attr('fill-opacity', 0.2)
+                    .attr('stroke', color)
+                    .attr('stroke-width', 1);
+            } else {
+                const size = d.group === 'anchor' ? 18 : 14;
+                el.append('rect')
+                    .attr('width', size).attr('height', size)
+                    .attr('x', -size / 2).attr('y', -size / 2)
+                    .attr('rx', 3)
+                    .attr('fill', color)
+                    .attr('fill-opacity', 0.15)
+                    .attr('stroke', color)
+                    .attr('stroke-width', 1);
             }
         });
 
-        // Node labels
         node.append('text')
             .text((d: any) => d.label)
-            .attr('x', 18)
+            .attr('x', 16)
             .attr('y', 4)
-            .attr('font-family', 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace')
+            .attr('font-family', "'IBM Plex Mono', monospace")
             .attr('font-size', '10px')
-            .attr('fill', '#ccc');
+            .attr('font-weight', '500')
+            .attr('fill', COLORS.label);
 
         simulation.on('tick', () => {
             link
@@ -181,7 +176,7 @@ export default function SemanticGraph({ data }: SemanticGraphProps) {
         canvas.height = svgEl.clientHeight * 2;
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
-        ctx.fillStyle = '#000';
+        ctx.fillStyle = COLORS.bg;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         const img = new Image();
         img.onload = () => {
@@ -195,33 +190,30 @@ export default function SemanticGraph({ data }: SemanticGraphProps) {
     };
 
     return (
-        <div className="w-full h-full bg-black relative overflow-hidden min-h-[400px]">
-            {/* Download Button */}
+        <div className="w-full h-full relative overflow-hidden min-h-[420px]" style={{ background: COLORS.bg }}>
             <button onClick={handleDownload}
-                className="absolute top-3 right-3 z-20 flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all hover:scale-105 bg-black/80 border border-[#333] text-[#A020F0]">
-                ⬇ SAVE GRAPH
+                className="absolute top-3 right-3 z-20 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-medium transition-all hover:scale-[1.02]"
+                style={{ background: 'rgba(9,9,11,0.9)', border: '1px solid var(--border-strong)', color: 'var(--text-secondary)', backdropFilter: 'blur(8px)' }}>
+                <Download className="w-3 h-3" /> Save
             </button>
 
             <svg ref={svgRef} className="w-full h-full absolute inset-0" />
 
             {/* Legend */}
-            <div className="absolute bottom-4 left-4 bg-[#111]/80 backdrop-blur border border-[#333] p-3 rounded-lg text-[10px] font-mono text-[#888] flex flex-col gap-2 z-10">
-                <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-[#A020F0] border border-white"></div>
-                    <span>Node (Floor/Room)</span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-[#008000] border border-white"></div>
-                    <span>Static Anchor</span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-[#FFA500] border border-white"></div>
-                    <span>Dynamic Object</span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-[#FF0000] rounded-full"></div>
-                    <span>Navigable Edge</span>
-                </div>
+            <div className="absolute bottom-3 left-3 flex gap-3 px-3 py-2 rounded-lg text-[10px] font-mono z-10"
+                style={{ background: 'rgba(9,9,11,0.85)', border: '1px solid var(--border)', backdropFilter: 'blur(8px)' }}>
+                {[
+                    { color: COLORS.root, label: 'Node', shape: 'rect' },
+                    { color: COLORS.anchor, label: 'Anchor', shape: 'rect' },
+                    { color: COLORS.object, label: 'Object', shape: 'rect' },
+                    { color: COLORS.edge, label: 'Edge', shape: 'circle' },
+                ].map(item => (
+                    <div key={item.label} className="flex items-center gap-1.5">
+                        <div className={`w-2 h-2 ${item.shape === 'circle' ? 'rounded-full' : 'rounded-[2px]'}`}
+                            style={{ background: item.color, opacity: 0.7 }} />
+                        <span style={{ color: 'var(--text-muted)' }}>{item.label}</span>
+                    </div>
+                ))}
             </div>
         </div>
     );
