@@ -6,8 +6,7 @@ import { SpatialNode, ObjectLocation, api } from '../../lib/api';
 import CommandBarComponent from "../../components/CommandBarComponent";
 import InteriorMapComponent from "../../components/InteriorMapComponent";
 import SemanticGraph from "../../components/SemanticGraph";
-import RobotSettingsModal from "../../components/RobotSettingsModal";
-import { Settings, Sun, Moon, Map, GitBranch, ArrowLeft, Loader2 } from "lucide-react";
+import { Sun, Moon, Map, GitBranch, ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 
 export default function ResultsPage() {
@@ -19,12 +18,8 @@ export default function ResultsPage() {
   const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'MAP' | 'GRAPH'>('MAP');
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
-  const [fontSize, setFontSize] = useState<'S' | 'M' | 'L'>('M');
-  const [robotApiUrl, setRobotApiUrl] = useState("http://localhost:8080/nav2/follow_waypoints");
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [robotApiUrl] = useState("http://localhost:8080/nav2/follow_waypoints");
   const [systemLogs, setSystemLogs] = useState<string[]>([]);
-
-  const fontSizeMap = { S: '13px', M: '14px', L: '16px' };
 
   const addSystemLog = (msg: string) => {
     setSystemLogs(prev => [...prev, msg]);
@@ -65,7 +60,7 @@ export default function ResultsPage() {
 
   return (
     <div className="space-bg min-h-screen transition-colors duration-300"
-      style={{ fontSize: fontSizeMap[fontSize], color: 'var(--text-primary)' }}>
+      style={{ color: 'var(--text-primary)' }}>
 
       <div className="relative z-[1]">
 
@@ -91,40 +86,11 @@ export default function ResultsPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid var(--border)' }}>
-                {(['S', 'M', 'L'] as const).map(s => (
-                  <button key={s} onClick={() => setFontSize(s)}
-                    className="w-8 h-8 flex items-center justify-center text-[11px] font-bold transition-colors"
-                    style={{
-                      background: fontSize === s ? 'var(--accent-dim)' : 'transparent',
-                      color: fontSize === s ? 'var(--accent)' : 'var(--text-muted)',
-                    }}>
-                    {s}
-                  </button>
-                ))}
-              </div>
-
               <button onClick={() => setTheme(isDark ? 'light' : 'dark')}
                 className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
                 style={{ color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
                 {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
-
-              <button onClick={() => setIsSettingsOpen(true)}
-                className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
-                style={{ color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
-                <Settings className="w-4 h-4" />
-              </button>
-
-              <div className="h-5 w-px mx-1" style={{ background: 'var(--border-strong)' }} />
-
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
-                style={{ border: '1px solid var(--border)' }}>
-                <span className="w-2 h-2 rounded-full animate-pulse-subtle" style={{ background: 'var(--success)', boxShadow: '0 0 8px rgba(74, 222, 128, 0.4)' }} />
-                <span className="text-[11px] font-semibold" style={{ color: 'var(--text-secondary)' }}>
-                  Online
-                </span>
-              </div>
             </div>
           </div>
         </header>
@@ -211,12 +177,6 @@ export default function ResultsPage() {
 
       </div>
 
-      <RobotSettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        apiUrl={robotApiUrl}
-        onSave={setRobotApiUrl}
-      />
     </div>
   );
 }
