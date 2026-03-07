@@ -3,8 +3,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Terminal, Send, MessageSquare, Loader2, ListChecks } from "lucide-react";
 import { api, SpatialNode, PlannerOutput } from "../lib/api";
-import { Terminal, Send, MessageSquare, Loader2, ListChecks } from "lucide-react";
-import { api, SpatialNode, PlannerOutput } from "../lib/api";
 
 interface CommandBarProps {
     topology: SpatialNode | null;
@@ -16,7 +14,6 @@ export default function CommandBarComponent({ topology, systemLogs }: CommandBar
     const [chatInput, setChatInput] = useState("");
     const [isChatting, setIsChatting] = useState(false);
     const [showTerminal, setShowTerminal] = useState(false);
-    const [latestPlan, setLatestPlan] = useState<PlannerOutput | null>(null);
     const [latestPlan, setLatestPlan] = useState<PlannerOutput | null>(null);
     const chatEndRef = useRef<HTMLDivElement>(null);
     const terminalEndRef = useRef<HTMLDivElement>(null);
@@ -54,16 +51,6 @@ export default function CommandBarComponent({ topology, systemLogs }: CommandBar
                 const errMsg = data.errors?.length ? `${data.message}: ${data.errors.join(", ")}` : data.message;
                 setChatHistory(prev => [...prev, { role: 'model', text: errMsg }]);
             }
-            const data = await api.planQa(userMsg, topology.node_name, newHistory);
-            if (data.status === "question") {
-                setChatHistory(prev => [...prev, { role: 'model', text: data.text }]);
-            } else if (data.status === "plan") {
-                setLatestPlan(data.plan);
-                setChatHistory(prev => [...prev, { role: 'model', text: `Here's your plan: ${data.plan.goal}` }]);
-            } else {
-                const errMsg = data.errors?.length ? `${data.message}: ${data.errors.join(", ")}` : data.message;
-                setChatHistory(prev => [...prev, { role: 'model', text: errMsg }]);
-            }
         } catch (err) {
             console.error("Chat error:", err);
             setChatHistory(prev => [...prev, { role: 'model', text: "Connection error. VLA offline." }]);
@@ -73,9 +60,6 @@ export default function CommandBarComponent({ topology, systemLogs }: CommandBar
     };
 
     return (
-        <div className="flex flex-col rounded-2xl overflow-hidden min-h-[280px] max-h-[380px] surface-card">
-            {/* Header */}
-            <div className="px-4 py-2.5 flex items-center justify-between"
         <div className="flex flex-col rounded-2xl overflow-hidden min-h-[280px] max-h-[380px] surface-card">
             {/* Header */}
             <div className="px-4 py-2.5 flex items-center justify-between"
@@ -91,18 +75,12 @@ export default function CommandBarComponent({ topology, systemLogs }: CommandBar
                     <button
                         onClick={() => setShowTerminal(!showTerminal)}
                         className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium transition-all"
-                        className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium transition-all"
                         style={{
-                            background: showTerminal ? 'var(--accent-dim)' : 'transparent',
-                            color: showTerminal ? 'var(--accent)' : 'var(--text-muted)',
-                            border: `1px solid ${showTerminal ? 'var(--accent)' : 'var(--border)'}`,
                             background: showTerminal ? 'var(--accent-dim)' : 'transparent',
                             color: showTerminal ? 'var(--accent)' : 'var(--text-muted)',
                             border: `1px solid ${showTerminal ? 'var(--accent)' : 'var(--border)'}`,
                         }}
                     >
-                        <Terminal className="w-2.5 h-2.5" />
-                        LOG
                         <Terminal className="w-2.5 h-2.5" />
                         LOG
                     </button>
@@ -112,15 +90,7 @@ export default function CommandBarComponent({ topology, systemLogs }: CommandBar
                             style={{ color: 'var(--danger)', background: 'rgba(248, 113, 113, 0.08)', border: '1px solid rgba(248, 113, 113, 0.15)' }}>
                             NO CONTEXT
                         </span>
-                        <span className="font-mono text-[10px] px-2 py-0.5 rounded"
-                            style={{ color: 'var(--danger)', background: 'rgba(248, 113, 113, 0.08)', border: '1px solid rgba(248, 113, 113, 0.15)' }}>
-                            NO CONTEXT
-                        </span>
                     ) : (
-                        <span className="font-mono text-[10px] px-2 py-0.5 rounded"
-                            style={{ color: 'var(--accent)', background: 'var(--accent-dim)' }}>
-                            {topology.node_name}
-                        </span>
                         <span className="font-mono text-[10px] px-2 py-0.5 rounded"
                             style={{ color: 'var(--accent)', background: 'var(--accent-dim)' }}>
                             {topology.node_name}
@@ -129,8 +99,6 @@ export default function CommandBarComponent({ topology, systemLogs }: CommandBar
                 </div>
             </div>
 
-            {/* Chat Area */}
-            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3"
             {/* Chat Area */}
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3"
                 style={{ background: 'var(--bg-primary)' }}>
@@ -144,8 +112,6 @@ export default function CommandBarComponent({ topology, systemLogs }: CommandBar
                 {chatHistory.map((msg, i) => (
                     <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
                         <div className="max-w-[85%] px-3 py-2 rounded-lg text-[13px] leading-relaxed"
-                    <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
-                        <div className="max-w-[85%] px-3 py-2 rounded-lg text-[13px] leading-relaxed"
                             style={msg.role === 'user'
                                 ? { background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid var(--border-strong)' }
                                 : { background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border)' }
@@ -155,8 +121,6 @@ export default function CommandBarComponent({ topology, systemLogs }: CommandBar
                     </div>
                 ))}
                 {isChatting && (
-                    <div className="flex justify-start animate-fade-in">
-                        <div className="px-3 py-2 rounded-lg flex items-center gap-2"
                     <div className="flex justify-start animate-fade-in">
                         <div className="px-3 py-2 rounded-lg flex items-center gap-2"
                             style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
@@ -188,46 +152,18 @@ export default function CommandBarComponent({ topology, systemLogs }: CommandBar
                         </ul>
                     </div>
                 )}
-                {latestPlan && (
-                    <div className="rounded-lg p-3 animate-fade-in"
-                        style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
-                        <div className="flex items-center gap-2 mb-2">
-                            <ListChecks className="w-3.5 h-3.5" style={{ color: 'var(--accent)' }} />
-                            <span className="text-[12px] font-bold" style={{ color: 'var(--text-primary)' }}>{latestPlan.goal}</span>
-                        </div>
-                        <p className="text-[10px] font-mono mb-2" style={{ color: 'var(--text-muted)' }}>
-                            {latestPlan.room} · {latestPlan.subtasks.length} subtasks, {latestPlan.dependency_graph.edges.length} dependencies
-                        </p>
-                        <ul className="space-y-1.5">
-                            {latestPlan.subtasks.map(st => (
-                                <li key={st.id} className="text-[11px] leading-snug"
-                                    style={{ color: 'var(--text-primary)', borderLeft: '2px solid var(--accent)', paddingLeft: 8 }}>
-                                    <span className="font-mono font-medium">{st.id}</span> {st.action}: {st.description}
-                                    {st.depends_on.length > 0 && (
-                                        <span className="font-mono opacity-70" style={{ color: 'var(--text-muted)' }}> (after {st.depends_on.join(", ")})</span>
-                                    )}
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                )}
                 <div ref={chatEndRef} />
             </div>
 
             {/* System Log */}
-            {/* System Log */}
             {showTerminal && (
-                <div className="h-28 overflow-y-auto px-3 py-2 font-mono text-[10px] space-y-0.5"
-                    style={{ background: 'var(--bg-primary)', borderTop: '1px solid var(--border)', color: 'var(--accent)' }}>
                 <div className="h-28 overflow-y-auto px-3 py-2 font-mono text-[10px] space-y-0.5"
                     style={{ background: 'var(--bg-primary)', borderTop: '1px solid var(--border)', color: 'var(--accent)' }}>
                     {systemLogs.length === 0 ? (
                         <div style={{ color: 'var(--text-muted)' }}>Waiting for system events...</div>
-                        <div style={{ color: 'var(--text-muted)' }}>Waiting for system events...</div>
                     ) : (
                         systemLogs.map((log, i) => (
                             <div key={i} className="flex gap-2">
-                                <span style={{ color: 'var(--text-muted)' }}>{new Date().toLocaleTimeString()}</span>
                                 <span style={{ color: 'var(--text-muted)' }}>{new Date().toLocaleTimeString()}</span>
                                 <span>{log}</span>
                             </div>
@@ -237,8 +173,6 @@ export default function CommandBarComponent({ topology, systemLogs }: CommandBar
                 </div>
             )}
 
-            {/* Input */}
-            <form onSubmit={handleChatSubmit} className="px-3 py-2.5 flex gap-2"
             {/* Input */}
             <form onSubmit={handleChatSubmit} className="px-3 py-2.5 flex gap-2"
                 style={{ borderTop: '1px solid var(--border)' }}>
@@ -256,10 +190,7 @@ export default function CommandBarComponent({ topology, systemLogs }: CommandBar
                     disabled={isChatting || !chatInput.trim() || !topology}
                     className="w-8 h-8 rounded-lg flex items-center justify-center disabled:opacity-30 transition-all"
                     style={{ background: 'var(--accent)', color: '#09090B' }}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center disabled:opacity-30 transition-all"
-                    style={{ background: 'var(--accent)', color: '#09090B' }}
                 >
-                    <Send className="w-3.5 h-3.5" />
                     <Send className="w-3.5 h-3.5" />
                 </button>
             </form>
