@@ -40,8 +40,12 @@ Extraction Rules:
 1. "node_name": Assign a logical, descriptive name to this location based on the visual context.
 2. "static_anchors": Identify large, immovable architectural features or heavy furniture.
    Each item must have: anchor_id, type, description, image_indices (0-based array).
+   - "type": Use a specific, recognizable name (e.g. "wooden bookshelf", "L-shaped sofa", "glass dining table") NOT generic categories like "furniture" or "architectural feature".
+   - "description": A short phrase describing the object and its position.
 3. "dynamic_objects": Identify movable objects of interest.
    Each item must have: object_id, type, description, image_indices (0-based array).
+   - "type": Use a specific, recognizable name (e.g. "laptop", "coffee mug", "TV remote") NOT generic categories like "electronics" or "object".
+   - "description": A short phrase describing the object and its position.
 4. "navigable_edges": Identify clear pathways leading out of this area.
    Each item must have: edge_id, description, visual_cue.
 

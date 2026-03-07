@@ -49,7 +49,7 @@ export default function LandingPage() {
             </Link>
 
             <Link
-              href="/dashboard"
+              href="/select-robot"
               className="cta-button text-[13px] font-semibold"
               style={{
                 padding: "10px 24px",
@@ -116,7 +116,7 @@ export default function LandingPage() {
               transition={{ duration: 0.7, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
               className="flex flex-col sm:flex-row items-center justify-center gap-4"
             >
-              <Link href="/dashboard" className="cta-button cta-button-primary">
+              <Link href="/select-robot" className="cta-button cta-button-primary">
                 Get Started
                 <ArrowRight className="w-5 h-5" />
               </Link>

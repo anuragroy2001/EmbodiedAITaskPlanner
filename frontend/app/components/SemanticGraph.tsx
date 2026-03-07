@@ -46,12 +46,12 @@ export default function SemanticGraph({ data }: SemanticGraphProps) {
         nodes.push({ id: rootId, group: 'root', label: data.node_name });
 
         data.static_anchors?.forEach(anchor => {
-            nodes.push({ id: anchor.anchor_id, group: 'anchor', label: anchor.type });
+            nodes.push({ id: anchor.anchor_id, group: 'anchor', label: anchor.description || anchor.type });
             links.push({ source: rootId, target: anchor.anchor_id, type: 'contains' });
         });
 
         data.dynamic_objects?.forEach(obj => {
-            nodes.push({ id: obj.object_id, group: 'object', label: obj.type });
+            nodes.push({ id: obj.object_id, group: 'object', label: obj.description || obj.type });
             links.push({ source: rootId, target: obj.object_id, type: 'contains' });
         });
 

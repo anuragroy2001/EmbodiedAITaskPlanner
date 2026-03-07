@@ -6,9 +6,8 @@ import { SpatialNode, ObjectLocation, api } from '../../lib/api';
 import CommandBarComponent from "../../components/CommandBarComponent";
 import InteriorMapComponent from "../../components/InteriorMapComponent";
 import SemanticGraph from "../../components/SemanticGraph";
-import DigitalTwin from "../../components/DigitalTwin";
 import RobotSettingsModal from "../../components/RobotSettingsModal";
-import { Settings, Sun, Moon, Map, GitBranch, Box, ArrowLeft, Loader2 } from "lucide-react";
+import { Settings, Sun, Moon, Map, GitBranch, ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 
 export default function ResultsPage() {
@@ -18,7 +17,7 @@ export default function ResultsPage() {
   const [locations, setLocations] = useState<ObjectLocation[]>([]);
   const [sourceImages, setSourceImages] = useState<string[]>([]);
   const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'MAP' | 'GRAPH' | 'TWIN'>('MAP');
+  const [viewMode, setViewMode] = useState<'MAP' | 'GRAPH'>('MAP');
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [fontSize, setFontSize] = useState<'S' | 'M' | 'L'>('M');
   const [robotApiUrl, setRobotApiUrl] = useState("http://localhost:8080/nav2/follow_waypoints");
@@ -62,7 +61,6 @@ export default function ResultsPage() {
   const viewTabs = [
     { key: 'MAP' as const, label: 'Map', icon: Map },
     { key: 'GRAPH' as const, label: 'Graph', icon: GitBranch },
-    { key: 'TWIN' as const, label: '3D Twin', icon: Box },
   ];
 
   return (
@@ -132,10 +130,12 @@ export default function ResultsPage() {
         </header>
 
         {/* MAIN */}
-        <main className="max-w-[1400px] mx-auto px-8 py-8 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <main className="max-w-[1400px] mx-auto px-8 py-8 grid grid-cols-1 lg:grid-cols-12 gap-6"
+          style={{ minHeight: "calc(100vh - 72px - 56px)" }}>
 
           {/* Visualization */}
-          <div className="lg:col-span-8 surface-card rounded-2xl overflow-hidden flex flex-col min-h-[520px] animate-fade-in-up"
+          <div className="lg:col-span-8 surface-card rounded-2xl overflow-hidden flex flex-col animate-fade-in-up"
+            style={{ minHeight: "calc(100vh - 72px - 56px - 64px)" }}
             style={{ animationDelay: '0.1s', animationFillMode: 'both' }}>
             {topology ? (
               <>
@@ -144,7 +144,6 @@ export default function ResultsPage() {
                     <h2 className="text-[14px] font-bold" style={{ color: 'var(--text-primary)' }}>
                       {viewMode === 'MAP' && 'Floor Plan'}
                       {viewMode === 'GRAPH' && 'Semantic Graph'}
-                      {viewMode === 'TWIN' && 'Digital Twin'}
                     </h2>
                     <span className="font-mono text-[11px] font-medium px-2 py-0.5 rounded-md"
                       style={{ color: 'var(--accent)', background: 'var(--accent-dim)' }}>
@@ -181,11 +180,6 @@ export default function ResultsPage() {
                     />
                   )}
                   {viewMode === 'GRAPH' && <SemanticGraph data={topology} />}
-                  {viewMode === 'TWIN' && mapImage && (
-                    <DigitalTwin mapImage={mapImage} locations={locations} topology={topology}
-                      selectedObjectId={selectedObjectId} onSelectObject={setSelectedObjectId}
-                    />
-                  )}
                 </div>
               </>
             ) : (
