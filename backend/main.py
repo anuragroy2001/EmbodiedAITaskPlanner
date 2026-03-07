@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 from vla_service import VLAService
 from planner import PlannerRequest, generate_task_dag
+from plan_qa import get_goal_or_question
 
 app = FastAPI(title="Embodied AI Task Planner Backend")
 
@@ -36,6 +37,13 @@ class ChatPayload(BaseModel):
     query: str
     node_name: str
     history: List[Dict[str, str]] = []
+
+
+class PlanQAPayload(BaseModel):
+    message: str
+    node_name: str
+    history: List[Dict[str, str]] = []
+    use_mock: bool = True
 
 
 @app.post("/api/upload-node")
@@ -129,6 +137,55 @@ async def chat(payload: ChatPayload):
     except Exception as e:
         print(f"Chat Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/plan-qa")
+async def plan_qa(payload: PlanQAPayload):
+    topology = node_data.get(payload.node_name)
+    if not topology:
+        if node_data:
+            payload.node_name = list(node_data.keys())[-1]
+            topology = node_data[payload.node_name]
+        else:
+            return {
+                "status": "error",
+                "message": "No environment data available. Process a node first.",
+            }
+
+    try:
+        result = get_goal_or_question(
+            history=payload.history,
+            message=payload.message,
+            node_name=payload.node_name,
+            topology=topology,
+        )
+    except Exception as e:
+        print(f"Plan QA Error (goal/question): {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+    if "goal" in result:
+        locations = node_locations.get(payload.node_name, [])
+        try:
+            plan_result = generate_task_dag(
+                topology=topology,
+                locations=locations,
+                goal=result["goal"],
+                node_name=payload.node_name,
+                use_mock=payload.use_mock,
+            )
+        except Exception as e:
+            print(f"Plan QA Error (generate_task_dag): {e}")
+            return {"status": "error", "message": str(e)}
+        if plan_result.planner_trace and not plan_result.planner_trace.validation_passed:
+            return {
+                "status": "error",
+                "message": "Planner validation failed",
+                "errors": plan_result.planner_trace.errors,
+            }
+        planning_runs[plan_result.task_id] = plan_result.model_dump()
+        return {"status": "plan", "plan": plan_result.model_dump()}
+
+    return {"status": "question", "text": result.get("question", "What task would you like me to plan?")}
 
 
 @app.post("/api/query-planner")

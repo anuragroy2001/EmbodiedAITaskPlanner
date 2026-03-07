@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Terminal, Send, MessageSquare, Loader2 } from "lucide-react";
-import { api, SpatialNode } from "../lib/api";
+import { Terminal, Send, MessageSquare, Loader2, ListChecks } from "lucide-react";
+import { api, SpatialNode, PlannerOutput } from "../lib/api";
 
 interface CommandBarProps {
     topology: SpatialNode | null;
@@ -14,6 +14,7 @@ export default function CommandBarComponent({ topology, systemLogs }: CommandBar
     const [chatInput, setChatInput] = useState("");
     const [isChatting, setIsChatting] = useState(false);
     const [showTerminal, setShowTerminal] = useState(false);
+    const [latestPlan, setLatestPlan] = useState<PlannerOutput | null>(null);
     const chatEndRef = useRef<HTMLDivElement>(null);
     const terminalEndRef = useRef<HTMLDivElement>(null);
 
@@ -40,11 +41,19 @@ export default function CommandBarComponent({ topology, systemLogs }: CommandBar
         setIsChatting(true);
 
         try {
-            const data = await api.chat(userMsg, topology.node_name, newHistory);
-            setChatHistory(prev => [...prev, { role: 'model', text: data.response || "No response." }]);
+            const data = await api.planQa(userMsg, topology.node_name, newHistory);
+            if (data.status === "question") {
+                setChatHistory(prev => [...prev, { role: 'model', text: data.text }]);
+            } else if (data.status === "plan") {
+                setLatestPlan(data.plan);
+                setChatHistory(prev => [...prev, { role: 'model', text: `Here's your plan: ${data.plan.goal}` }]);
+            } else {
+                const errMsg = data.errors?.length ? `${data.message}: ${data.errors.join(", ")}` : data.message;
+                setChatHistory(prev => [...prev, { role: 'model', text: errMsg }]);
+            }
         } catch (err) {
-            console.error("Chat error:", err);
-            setChatHistory(prev => [...prev, { role: 'model', text: "Connection error. VLA offline." }]);
+            console.error("Plan QA error:", err);
+            setChatHistory(prev => [...prev, { role: 'model', text: "Connection error. Backend offline." }]);
         } finally {
             setIsChatting(false);
         }
@@ -58,7 +67,7 @@ export default function CommandBarComponent({ topology, systemLogs }: CommandBar
                 <div className="flex items-center gap-2">
                     <MessageSquare className="w-3.5 h-3.5" style={{ color: 'var(--accent)' }} />
                     <h3 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>
-                        Spatial Query
+                        Plan generation
                     </h3>
                 </div>
 
@@ -96,8 +105,8 @@ export default function CommandBarComponent({ topology, systemLogs }: CommandBar
                 {chatHistory.length === 0 && (
                     <div className="text-center my-auto flex flex-col items-center gap-2" style={{ color: 'var(--text-muted)' }}>
                         <MessageSquare className="w-6 h-6 opacity-20" />
-                        <p className="text-[13px] font-medium">Ask about the environment</p>
-                        <p className="text-[11px] font-mono opacity-60">&quot;Where is the microwave?&quot;</p>
+                        <p className="text-[13px] font-medium">Describe a task or answer questions to generate a plan</p>
+                        <p className="text-[11px] font-mono opacity-60">&quot;Clean the kitchen&quot;</p>
                     </div>
                 )}
                 {chatHistory.map((msg, i) => (
@@ -116,8 +125,31 @@ export default function CommandBarComponent({ topology, systemLogs }: CommandBar
                         <div className="px-3 py-2 rounded-lg flex items-center gap-2"
                             style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
                             <Loader2 className="w-3 h-3 animate-spin" style={{ color: 'var(--text-muted)' }} />
-                            <span className="font-mono text-[12px]" style={{ color: 'var(--text-muted)' }}>Querying...</span>
+                            <span className="font-mono text-[12px]" style={{ color: 'var(--text-muted)' }}>Generating plan...</span>
                         </div>
+                    </div>
+                )}
+                {latestPlan && (
+                    <div className="rounded-lg p-3 animate-fade-in"
+                        style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
+                        <div className="flex items-center gap-2 mb-2">
+                            <ListChecks className="w-3.5 h-3.5" style={{ color: 'var(--accent)' }} />
+                            <span className="text-[12px] font-bold" style={{ color: 'var(--text-primary)' }}>{latestPlan.goal}</span>
+                        </div>
+                        <p className="text-[10px] font-mono mb-2" style={{ color: 'var(--text-muted)' }}>
+                            {latestPlan.room} · {latestPlan.subtasks.length} subtasks, {latestPlan.dependency_graph.edges.length} dependencies
+                        </p>
+                        <ul className="space-y-1.5">
+                            {latestPlan.subtasks.map(st => (
+                                <li key={st.id} className="text-[11px] leading-snug"
+                                    style={{ color: 'var(--text-primary)', borderLeft: '2px solid var(--accent)', paddingLeft: 8 }}>
+                                    <span className="font-mono font-medium">{st.id}</span> {st.action}: {st.description}
+                                    {st.depends_on.length > 0 && (
+                                        <span className="font-mono opacity-70" style={{ color: 'var(--text-muted)' }}> (after {st.depends_on.join(", ")})</span>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
                     </div>
                 )}
                 <div ref={chatEndRef} />
@@ -148,7 +180,7 @@ export default function CommandBarComponent({ topology, systemLogs }: CommandBar
                     type="text"
                     value={chatInput}
                     onChange={e => setChatInput(e.target.value)}
-                    placeholder={topology ? "Ask about the environment..." : "Process a node first"}
+                    placeholder={topology ? "Describe your task or answer the question..." : "Process a node first"}
                     className="flex-1 rounded-lg px-3 py-1.5 text-[13px] transition-colors"
                     style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
                     disabled={isChatting || !topology}

@@ -4,6 +4,7 @@ from typing import List
 
 import networkx as nx
 
+from .planner_normalization import resolve_object_id
 from .planner_schemas import PlannerOutput, Subtask, ValidationResult
 
 
@@ -13,7 +14,9 @@ def validate_known_objects(subtasks: List[Subtask], grounded_context: dict) -> L
     known = set(grounded_context.get("entities", {}).keys())
     for st in subtasks:
         for oid in st.objects or []:
-            if oid and oid not in known:
+            if not oid:
+                continue
+            if resolve_object_id(oid, known) is None:
                 errors.append(f"Subtask '{st.id}' references unknown object '{oid}'")
     return errors
 

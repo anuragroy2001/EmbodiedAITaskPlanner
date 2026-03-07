@@ -24,6 +24,7 @@ try:
     from vla_service import client
 except ImportError:
     client = None
+from genai_retry import generate_content_with_retry
 from model_config import MODEL_PLANNER
 from google.genai import types  # type: ignore[import-untyped]
 
@@ -50,7 +51,8 @@ def call_planner_model(prompt: str) -> dict:
     """Call Gemini with planner system prompt; return parsed JSON dict."""
     if not client:
         raise ValueError("GenAI client not initialized.")
-    response = client.models.generate_content(
+    response = generate_content_with_retry(
+        client,
         model=MODEL_PLANNER,
         contents=prompt,
         config=types.GenerateContentConfig(
@@ -80,7 +82,8 @@ def call_planner_repair_model(
     repair_prompt = build_repair_prompt(
         original_output, validation_errors, grounded_context, goal, node_name
     )
-    response = client.models.generate_content(
+    response = generate_content_with_retry(
+        client,
         model=MODEL_PLANNER,
         contents=repair_prompt,
         config=types.GenerateContentConfig(

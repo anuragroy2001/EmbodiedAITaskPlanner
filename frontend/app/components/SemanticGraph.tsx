@@ -20,7 +20,7 @@ const COLORS = {
     anchor: '#818CF8',
     object: '#FDE68A',
     edge: '#F87171',
-    link: 'rgba(255, 255, 255, 0.08)',
+    link: '#ffffff',
     label: '#A1A1AA',
     bg: '#020108',
 };

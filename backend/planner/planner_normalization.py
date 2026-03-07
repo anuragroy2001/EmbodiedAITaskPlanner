@@ -1,8 +1,27 @@
 """Normalize topology and locations into a grounded planner context."""
 
-from typing import Dict, List, Optional
+import re
+from typing import Dict, List, Optional, Set
 
 from .planner_schemas import TaskLocation
+
+
+def resolve_object_id(reference: str, known_ids: Set[str]) -> Optional[str]:
+    """Resolve a planner reference (e.g. mug_1) to a known entity ID (e.g. mug).
+    Returns the canonical entity ID if reference matches exactly or after stripping
+    a trailing _<digits> suffix; otherwise None.
+    """
+    if not reference:
+        return None
+    if reference in known_ids:
+        return reference
+    # Allow planner-style suffix: mug_1 -> mug, sink_2 -> sink
+    match = re.match(r"^(.+?)_\d+$", reference)
+    if match:
+        base = match.group(1)
+        if base in known_ids:
+            return base
+    return None
 
 
 def normalize_topology(topology: dict) -> dict:
@@ -108,6 +127,10 @@ def choose_location_for_objects(
 
     for oid in object_ids or []:
         ent = entities.get(oid)
+        if not ent:
+            # Resolve planner-style IDs (e.g. mug_1 -> mug)
+            canonical = resolve_object_id(oid, set(entities.keys()))
+            ent = entities.get(canonical) if canonical else None
         if not ent:
             continue
         center = ent.get("map_center")

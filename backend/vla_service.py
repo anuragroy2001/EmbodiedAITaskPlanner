@@ -19,6 +19,7 @@ from model_config import (
     MODEL_TOPOLOGY, MODEL_LAYOUT, MODEL_IMAGE, MODEL_LOCALIZATION,
     MODEL_CHAT, MODEL_PLANNER
 )
+from genai_retry import generate_content_with_retry
 
 SYSTEM_INSTRUCTION = """You are an advanced Embodied AI and Visual-Language VLA subsystem. 
 Your task is to process images representing a 360-degree view of a single localized environment (a "Node") 
@@ -55,13 +56,14 @@ Return STRICT JSON with keys: node_name, static_anchors, dynamic_objects, naviga
             )
         parts.append(prompt)
 
-        response = client.models.generate_content(
+        response = generate_content_with_retry(
+            client,
             model=MODEL_TOPOLOGY,
             contents=parts,
             config=types.GenerateContentConfig(
                 system_instruction=SYSTEM_INSTRUCTION,
                 response_mime_type="application/json"
-            )
+            ),
         )
 
         vla_result = json.loads(response.text)
@@ -97,12 +99,13 @@ Spatial data:
             )
         parts.append(prompt)
 
-        response = client.models.generate_content(
+        response = generate_content_with_retry(
+            client,
             model=MODEL_LAYOUT,
             contents=parts,
             config=types.GenerateContentConfig(
                 response_mime_type="text/plain"
-            )
+            ),
         )
 
         return response.text or ""
@@ -128,7 +131,8 @@ Do not include any text, labels, words, or numbers.
 Layout details: {layout_text}"""
 
         print("  [Step 2b] Generating floor plan image from text-only prompt...")
-        response = client.models.generate_content(
+        response = generate_content_with_retry(
+            client,
             model=MODEL_IMAGE,
             contents=prompt,
             config=types.GenerateContentConfig(
@@ -136,7 +140,7 @@ Layout details: {layout_text}"""
                 image_config=types.ImageConfig(
                     aspect_ratio="16:9"
                 )
-            )
+            ),
         )
 
         # Extract the generated image from the response
@@ -182,12 +186,13 @@ Coordinates are percentages of image dimensions. Ensure ymin < ymax and xmin < x
             prompt
         ]
 
-        response = client.models.generate_content(
+        response = generate_content_with_retry(
+            client,
             model=MODEL_LOCALIZATION,
             contents=parts,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json"
-            )
+            ),
         )
 
         locations = json.loads(response.text)
@@ -249,12 +254,13 @@ If the user asks about a path, describe the route step-by-step using the navigab
         user_parts.append(types.Part.from_text(text=query))
         contents.append(types.Content(role="user", parts=user_parts))
 
-        response = client.models.generate_content(
+        response = generate_content_with_retry(
+            client,
             model=MODEL_CHAT,
             contents=contents,
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction
-            )
+            ),
         )
 
         return response.text or "No response."
@@ -277,11 +283,12 @@ If the user asks about a path, describe the route step-by-step using the navigab
         {{ "plan": ["node_1", "target"], "message": "reason" }}
         """
 
-        response = client.models.generate_content(
+        response = generate_content_with_retry(
+            client,
             model=MODEL_PLANNER,
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json"
-            )
+            ),
         )
         return json.loads(response.text)
