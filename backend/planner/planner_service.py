@@ -12,9 +12,9 @@ from .planner_schemas import (
     DependencyGraph,
 )
 from .planner_normalization import build_grounded_context, choose_location_for_objects
-from .planner_validators import validate_planner_output
+from .planner_validators import validate_planner_output, compute_execution_order
 from .planner_prompts import (
-    PLANNER_SYSTEM_PROMPT,
+    get_system_prompt_for_robot,
     build_planner_user_prompt,
     build_repair_prompt,
 )
@@ -47,7 +47,7 @@ def load_mock_planner_output(goal: str) -> dict:
         return json.load(f)
 
 
-def call_planner_model(prompt: str) -> dict:
+def call_planner_model(prompt: str, system_prompt: str) -> dict:
     """Call Gemini with planner system prompt; return parsed JSON dict."""
     if not client:
         raise ValueError("GenAI client not initialized.")
@@ -56,7 +56,7 @@ def call_planner_model(prompt: str) -> dict:
         model=MODEL_PLANNER,
         contents=prompt,
         config=types.GenerateContentConfig(
-            system_instruction=PLANNER_SYSTEM_PROMPT,
+            system_instruction=system_prompt,
             response_mime_type="application/json",
         ),
     )
@@ -77,6 +77,7 @@ def call_planner_repair_model(
     grounded_context: dict,
     goal: str,
     node_name: str,
+    system_prompt: str,
 ) -> dict:
     """One repair attempt: build repair prompt, call Gemini, return parsed dict."""
     if not client:
@@ -89,6 +90,7 @@ def call_planner_repair_model(
         model=MODEL_PLANNER,
         contents=repair_prompt,
         config=types.GenerateContentConfig(
+            system_instruction=system_prompt,
             response_mime_type="application/json",
         ),
     )
@@ -175,9 +177,10 @@ def apply_deterministic_grounding(
     return planner_output
 
 
-def generate_task_dag(topology, locations, goal, node_name, use_mock=False) -> PlannerOutput:
+def generate_task_dag(topology, locations, goal, node_name, use_mock=False, robot_type: str = "humanoid") -> PlannerOutput:
     """Generate a grounded task DAG for the goal using topology and locations."""
-    print(f"[planner] generate_task_dag: goal={goal!r}, node_name={node_name!r}, use_mock={use_mock}, locations_count={len(locations) if locations else 0}")
+    system_prompt = get_system_prompt_for_robot(robot_type)
+    print(f"[planner] generate_task_dag: goal={goal!r}, node_name={node_name!r}, use_mock={use_mock}, robot_type={robot_type!r}, locations_count={len(locations) if locations else 0}")
     grounded_context = build_grounded_context(topology, locations)
     context_keys = list(grounded_context.keys()) if isinstance(grounded_context, dict) else "?"
     print(f"[planner] Grounded context keys: {context_keys}")
@@ -190,7 +193,7 @@ def generate_task_dag(topology, locations, goal, node_name, use_mock=False) -> P
         model_name = "mock"
     else:
         print(f"[planner] Calling planner model ({MODEL_PLANNER})...")
-        raw_output = call_planner_model(prompt_context)
+        raw_output = call_planner_model(prompt_context, system_prompt)
         model_name = MODEL_PLANNER
 
     raw_subtasks = raw_output.get("subtasks", []) if isinstance(raw_output, dict) else []
@@ -213,6 +216,7 @@ def generate_task_dag(topology, locations, goal, node_name, use_mock=False) -> P
             grounded_context,
             goal,
             node_name,
+            system_prompt=system_prompt,
         )
         planner_output = parse_planner_output(repaired_raw, goal, node_name)
         planner_output = apply_deterministic_grounding(planner_output, grounded_context)
@@ -226,5 +230,6 @@ def generate_task_dag(topology, locations, goal, node_name, use_mock=False) -> P
         validation_passed=validation.valid,
         errors=validation.errors,
     )
+    planner_output.execution_order = compute_execution_order(planner_output)
     print(f"[planner] Returning PlannerOutput: task_id={planner_output.task_id!r}, subtasks={len(planner_output.subtasks)}, validation_passed={validation.valid}")
     return planner_output

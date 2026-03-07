@@ -18,8 +18,15 @@ export interface ObjectLocation {
 /** Plan QA response: either a follow-up question or a full task plan */
 export type PlanQAResponse =
     | { status: "question"; text: string }
-    | { status: "plan"; plan: PlannerOutput }
+    | { status: "plan"; plan: PlannerOutput; plan_summary: PlanSummary }
     | { status: "error"; message: string; errors?: string[] };
+
+export interface PlanSummary {
+    goal: string;
+    room: string;
+    subtask_count: number;
+    dependency_count: number;
+}
 
 export interface TaskLocation {
     x: number;
@@ -52,6 +59,7 @@ export interface PlannerOutput {
     dependency_graph: DependencyGraph;
     warnings: string[];
     planner_trace?: { mode: string; model: string; validation_passed: boolean; errors: string[] };
+    execution_order?: string[];
 }
 
 export const api = {

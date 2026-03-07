@@ -127,3 +127,23 @@ def validate_planner_output(
         errors=all_errors,
         warnings=all_warnings,
     )
+
+
+def compute_execution_order(planner_output: PlannerOutput) -> List[str]:
+    """Compute a valid execution order (topological order) from the dependency graph.
+    Returns task IDs in order: dependencies first, so the frontend can render a timeline.
+    """
+    G = nx.DiGraph()
+    dg = planner_output.dependency_graph
+    for n in dg.nodes:
+        G.add_node(n)
+    for e in dg.edges:
+        src = e.get("source")
+        tgt = e.get("target")
+        if src and tgt:
+            G.add_edge(src, tgt)
+    try:
+        order = list(nx.topological_sort(G))
+        return list(reversed(order))
+    except nx.NetworkXError:
+        return list(dg.nodes)

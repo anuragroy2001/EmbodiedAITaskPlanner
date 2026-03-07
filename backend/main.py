@@ -2,7 +2,7 @@ import networkx as nx
 import base64
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union, Literal
 from pydantic import BaseModel
 
 from vla_service import VLAService
@@ -53,6 +53,32 @@ class PlanQAPayload(BaseModel):
     node_name: str
     history: List[Dict[str, str]] = []
     use_mock: bool = False
+    robot_type: str = "humanoid"
+
+
+# Plan-QA response models for consistent JSON output and OpenAPI docs
+class PlanSummary(BaseModel):
+    goal: str
+    room: str
+    subtask_count: int
+    dependency_count: int
+
+
+class PlanQAQuestionResponse(BaseModel):
+    status: Literal["question"] = "question"
+    text: str
+
+
+class PlanQAErrorResponse(BaseModel):
+    status: Literal["error"] = "error"
+    message: str
+    errors: Optional[List[str]] = None
+
+
+class PlanQAPlanResponse(BaseModel):
+    status: Literal["plan"] = "plan"
+    plan: Dict[str, Any]
+    plan_summary: PlanSummary
 
 
 @app.post("/api/upload-node")
@@ -178,10 +204,9 @@ async def plan_qa(payload: PlanQAPayload):
             print(f"[plan-qa] Node not found, using latest: node_name={payload.node_name!r}")
         else:
             print("[plan-qa] No topology: returning error (no environment data)")
-            return {
-                "status": "error",
-                "message": "No environment data available. Process a node first.",
-            }
+            return PlanQAErrorResponse(
+                message="No environment data available. Process a node first."
+            ).model_dump(mode="json")
     else:
         print(f"[plan-qa] Topology resolved for node_name={payload.node_name!r}")
 
@@ -210,25 +235,35 @@ async def plan_qa(payload: PlanQAPayload):
                 goal=goal,
                 node_name=payload.node_name,
                 use_mock=payload.use_mock,
+                robot_type=payload.robot_type,
             )
         except Exception as e:
             print(f"[plan-qa] Plan QA Error (generate_task_dag): {e}")
-            return {"status": "error", "message": str(e)}
-        print(f"[plan-qa] Plan generated: task_id={plan_result.task_id!r}, subtasks={len(plan_result.subtasks)}, validation_passed={getattr(plan_result.planner_trace, 'validation_passed', None)}")
+            return PlanQAErrorResponse(message=str(e)).model_dump(mode="json")
+        plan_dict = plan_result.model_dump(mode="json")
         if plan_result.planner_trace and not plan_result.planner_trace.validation_passed:
             print(f"[plan-qa] Validation failed: errors={plan_result.planner_trace.errors}")
-            return {
-                "status": "error",
-                "message": "Planner validation failed",
-                "errors": plan_result.planner_trace.errors,
-            }
-        planning_runs[plan_result.task_id] = plan_result.model_dump()
+            return PlanQAErrorResponse(
+                message="Planner validation failed",
+                errors=plan_result.planner_trace.errors,
+            ).model_dump(mode="json")
+        print(f"[plan-qa] Plan generated: task_id={plan_result.task_id!r}, subtasks={len(plan_result.subtasks)}, validation_passed={getattr(plan_result.planner_trace, 'validation_passed', None)}")
+        planning_runs[plan_result.task_id] = plan_dict
+        plan_summary = PlanSummary(
+            goal=plan_result.goal,
+            room=plan_result.room,
+            subtask_count=len(plan_result.subtasks),
+            dependency_count=len(plan_result.dependency_graph.edges),
+        )
         print(f"[plan-qa] Returning status=plan, task_id={plan_result.task_id!r}")
-        return {"status": "plan", "plan": plan_result.model_dump()}
+        return PlanQAPlanResponse(
+            plan=plan_dict,
+            plan_summary=plan_summary,
+        ).model_dump(mode="json")
 
     question = result.get("question", "What task would you like me to plan?")
     print(f"[plan-qa] Returning status=question: {question!r}")
-    return {"status": "question", "text": question}
+    return PlanQAQuestionResponse(text=question).model_dump(mode="json")
 
 
 @app.post("/api/query-planner")
@@ -291,13 +326,14 @@ async def task_plan(payload: PlannerRequest):
         node_name=payload.node_name,
         # use_mock=payload.use_mock,
         use_mock=False,
+        robot_type=payload.robot_type.value,
     )
     if result.planner_trace and not result.planner_trace.validation_passed:
         raise HTTPException(
             status_code=500,
             detail={"message": "Planner validation failed", "errors": result.planner_trace.errors},
         )
-    planning_runs[result.task_id] = result.model_dump()
+    planning_runs[result.task_id] = result.model_dump(mode="json")
     return result
 
 

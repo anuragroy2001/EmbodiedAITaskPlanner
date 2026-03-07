@@ -1,13 +1,21 @@
 """Pydantic models for the task planner layer."""
 
+from enum import Enum
 from typing import List, Dict, Optional
 from pydantic import BaseModel
+
+
+class RobotType(str, Enum):
+    humanoid = "humanoid"
+    quadruped = "quadruped"
+    mobile_base = "mobile_base"
 
 
 class PlannerRequest(BaseModel):
     node_name: str
     goal: str
     use_mock: bool = True
+    robot_type: RobotType = RobotType.humanoid
 
 
 class TaskLocation(BaseModel):
@@ -48,6 +56,7 @@ class PlannerOutput(BaseModel):
     dependency_graph: DependencyGraph
     warnings: List[str] = []
     planner_trace: Optional[PlannerTrace] = None
+    execution_order: List[str] = []
 
 
 class ValidationResult(BaseModel):
