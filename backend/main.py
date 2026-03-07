@@ -18,7 +18,7 @@ from cache import (
     save_map,
 )
 
-app = FastAPI(title="Embodied AI Task Planner Backend")
+app = FastAPI(title="RPG — Robotic Planning with Gemini")
 
 app.add_middleware(
     CORSMiddleware,

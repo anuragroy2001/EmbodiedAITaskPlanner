@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "EmbodiedAITaskPlanner — Embodied AI Navigation",
-  description: "Indoor spatial intelligence platform for embodied AI and autonomous navigation",
+  title: "RPG — Robotic Planning with Gemini",
+  description: "Indoor spatial intelligence and task planning for robotics, powered by Gemini",
 };
 
 export default function RootLayout({

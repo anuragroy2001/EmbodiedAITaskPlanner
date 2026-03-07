@@ -4,6 +4,52 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { Download, X, Eye, Loader2, Send } from "lucide-react";
 import { ObjectLocation, SpatialNode, PlannerOutput } from "../lib/api";
 
+/** Groups waypoints by distance (within tolerancePct), then stacks each group vertically so lower task ID is on top. */
+function spreadWaypoints(
+    waypoints: { x: number; y: number; label: string }[],
+    tolerancePct: number = 5,
+    stackOffsetPct: number = 6
+): { x: number; y: number; label: string }[] {
+    if (waypoints.length === 0) return [];
+    const dist = (i: number, j: number) => {
+        const a = waypoints[i], b = waypoints[j];
+        return Math.hypot(a.x - b.x, a.y - b.y);
+    };
+    const parent = waypoints.map((_, i) => i);
+    const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+    const union = (i: number, j: number) => {
+        const pi = find(i), pj = find(j);
+        if (pi !== pj) parent[Math.max(pi, pj)] = Math.min(pi, pj);
+    };
+    for (let i = 0; i < waypoints.length; i++)
+        for (let j = i + 1; j < waypoints.length; j++)
+            if (dist(i, j) <= tolerancePct) union(i, j);
+
+    const groupByRoot = new Map<number, number[]>();
+    waypoints.forEach((_, index) => {
+        const root = find(index);
+        if (!groupByRoot.has(root)) groupByRoot.set(root, []);
+        groupByRoot.get(root)!.push(index);
+    });
+
+    const result: { x: number; y: number; label: string }[] = new Array(waypoints.length);
+    groupByRoot.forEach((indices) => {
+        indices.sort((a, b) => a - b);
+        const n = indices.length;
+        const cx = indices.reduce((s, i) => s + waypoints[i].x, 0) / n;
+        const cy = indices.reduce((s, i) => s + waypoints[i].y, 0) / n;
+        indices.forEach((idx, i) => {
+            const y = cy + i * stackOffsetPct;
+            result[idx] = {
+                x: cx,
+                y: Math.max(0, Math.min(100, y)),
+                label: waypoints[idx].label,
+            };
+        });
+    });
+    return result;
+}
+
 interface InteriorMapProps {
     mapImage: string;
     locations: ObjectLocation[];
@@ -245,6 +291,8 @@ export default function InteriorMapComponent({
 
                 if (waypoints.length < 2) return null;
 
+                const spreadWps = spreadWaypoints(waypoints, 5, 6);
+
                 const ARROW_COLOR = "#22c55e";
                 const ARROW_COLOR_RGB = "34, 197, 94";
                 const NODE_FILL = "#ffffff";
@@ -256,7 +304,7 @@ export default function InteriorMapComponent({
                 const ENDPOINT_W = 110;
                 const ENDPOINT_H = 42;
 
-                const lastIdx = waypoints.length - 1;
+                const lastIdx = spreadWps.length - 1;
 
                 return (<>
                     <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 15 }}>
@@ -272,10 +320,10 @@ export default function InteriorMapComponent({
                             </filter>
                         </defs>
 
-                        {/* Arrows between waypoints */}
-                        {waypoints.map((wp, i) => {
+                        {/* Arrows between waypoints (use spread positions so arrows connect to visible nodes) */}
+                        {spreadWps.map((wp, i) => {
                             if (i === 0) return null;
-                            const prev = waypoints[i - 1];
+                            const prev = spreadWps[i - 1];
                             const dx = wp.x - prev.x;
                             const dy = wp.y - prev.y;
                             const len = Math.sqrt(dx * dx + dy * dy);
@@ -305,8 +353,8 @@ export default function InteriorMapComponent({
                         })}
 
                     </svg>
-                    {/* Waypoint nodes (HTML overlay for proper text rendering) */}
-                    {waypoints.map((wp, i) => {
+                    {/* Waypoint nodes (HTML overlay for proper text rendering, using spread positions to avoid overlap) */}
+                    {spreadWps.map((wp, i) => {
                         const isStart = i === 0;
                         const isEnd = i === lastIdx;
                         const isEndpoint = isStart || isEnd;

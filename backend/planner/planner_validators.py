@@ -1,12 +1,27 @@
 """Deterministic validation for planner output (DAG, object refs, coordinates)."""
 
-from typing import List
+import re
+from typing import List, Tuple
 
 import networkx as nx
 
 from .planner_normalization import resolve_object_id
 from .planner_prompts import get_allowed_actions, normalize_action
 from .planner_schemas import PlannerOutput, Subtask, ValidationResult
+
+
+def _task_id_sort_key(node_id: str) -> Tuple[float, str]:
+    """Return (numeric_order, node_id) for deterministic tie-breaking.
+    Handles t1, t2, task_1, step_1, etc. IDs without numbers sort after numbered ones.
+    """
+    if not node_id:
+        return (float("inf"), node_id)
+    s = node_id.strip()
+    # Match trailing number: t1, t2, T3, task_1, step_2, etc.
+    match = re.search(r"(\d+)\s*$", s)
+    if match:
+        return (float(match.group(1)), node_id)
+    return (float("inf"), node_id)
 
 
 def validate_known_objects(subtasks: List[Subtask], grounded_context: dict) -> List[str]:
@@ -147,10 +162,13 @@ def validate_planner_output(
 
 def compute_execution_order(planner_output: PlannerOutput) -> List[str]:
     """Compute a valid execution order (topological order) from the dependency graph.
-    Returns task IDs in order: dependencies first, so the frontend can render a timeline.
+    Returns task IDs in order: dependencies first. When multiple tasks are independent
+    (e.g. t3 and t4 both depend only on t2), breaks ties by task ID so order is
+    numerical (t3 before t4).
     """
-    G = nx.DiGraph()
     dg = planner_output.dependency_graph
+    # G: edge (src, tgt) means "src depends on tgt"
+    G = nx.DiGraph()
     for n in dg.nodes:
         G.add_node(n)
     for e in dg.edges:
@@ -158,8 +176,26 @@ def compute_execution_order(planner_output: PlannerOutput) -> List[str]:
         tgt = e.get("target")
         if src and tgt:
             G.add_edge(src, tgt)
+    # Execution order = dependencies first = topological order of reversed graph
+    G_rev = G.reverse()
     try:
-        order = list(nx.topological_sort(G))
-        return list(reversed(order))
-    except nx.NetworkXError:
-        return list(dg.nodes)
+        # Kahn's algorithm: when multiple nodes are ready, pick smallest task ID first
+        in_degree = dict(G_rev.in_degree())
+        ready = [n for n in G_rev.nodes if in_degree[n] == 0]
+        order: List[str] = []
+        while ready:
+            ready.sort(key=_task_id_sort_key)
+            n = ready.pop(0)
+            order.append(n)
+            for succ in G_rev.successors(n):
+                in_degree[succ] -= 1
+                if in_degree[succ] == 0:
+                    ready.append(succ)
+        if len(order) != len(dg.nodes):
+            try:
+                return list(reversed(list(nx.topological_sort(G))))
+            except nx.NetworkXError:
+                return sorted(dg.nodes, key=_task_id_sort_key)
+        return order
+    except (nx.NetworkXError, KeyError):
+        return sorted(dg.nodes, key=_task_id_sort_key)

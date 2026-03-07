@@ -35,7 +35,7 @@ export default function CapturePage() {
               <div>
                 <h1 className="text-[18px] font-extrabold tracking-[-0.02em]"
                   style={{ color: 'var(--text-primary)' }}>
-                  EmbodiedAI<span style={{ color: 'var(--accent)' }}>TaskPlanner</span>
+                  Robotic Planning with Gemini
                 </h1>
               </div>
             </div>
@@ -76,7 +76,7 @@ export default function CapturePage() {
         }}>
           <div className="max-w-[1400px] mx-auto px-8 h-14 flex items-center text-[12px]"
             style={{ color: 'var(--text-muted)' }}>
-            <span className="font-semibold">EmbodiedAITaskPlanner</span>
+            <span className="font-semibold">Robotic Planning with Gemini</span>
           </div>
         </footer>
 

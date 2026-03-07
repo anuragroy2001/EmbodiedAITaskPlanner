@@ -86,7 +86,7 @@ export default function SelectRobotPage() {
                 <ArrowLeft className="w-4 h-4" />
               </div>
               <span className="text-[17px] font-bold tracking-[-0.02em] text-white">
-                EmbodiedAI
+                Robotic Planning with Gemini
               </span>
             </Link>
           </div>

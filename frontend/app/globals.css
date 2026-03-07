@@ -4,6 +4,7 @@
   --bg-primary: #0c0c0c;
   --bg-secondary: #141414;
   --bg-elevated: #1a1a1a;
+  --bg-subtask-inner: rgba(255, 255, 255, 0.04);
   --bg-card: rgba(18, 18, 18, 0.7);
   --border: rgba(255, 255, 255, 0.06);
   --border-strong: rgba(255, 255, 255, 0.12);
@@ -25,6 +26,7 @@
   --bg-primary: #F8F8F8;
   --bg-secondary: #F0F0F0;
   --bg-elevated: #E5E5E5;
+  --bg-subtask-inner: rgba(255, 255, 255, 0.5);
   --bg-card: rgba(255, 255, 255, 0.9);
   --border: rgba(0, 0, 0, 0.06);
   --border-strong: rgba(0, 0, 0, 0.1);

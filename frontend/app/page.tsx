@@ -41,10 +41,10 @@ export default function LandingPage() {
                   border: "1px solid rgba(255, 255, 255, 0.1)",
                 }}
               >
-                E
+                R
               </div>
               <span className="text-[17px] font-bold tracking-[-0.02em] text-white">
-                EmbodiedAI
+                Robotic Planning with Gemini
               </span>
             </Link>
 
@@ -83,7 +83,7 @@ export default function LandingPage() {
                 }}
               >
                 <Cpu className="w-3.5 h-3.5" />
-                Spatial Intelligence for Embodied AI
+                Robotic Planning with Gemini
               </div>
             </motion.div>
 
@@ -158,7 +158,7 @@ export default function LandingPage() {
                     <div className="w-3 h-3 rounded-full" style={{ background: "#777" }} />
                     <div className="w-3 h-3 rounded-full" style={{ background: "#999" }} />
                     <span className="text-[12px] font-mono ml-3" style={{ color: "#555" }}>
-                      EmbodiedAI Dashboard
+                      Robotic Planning with Gemini — Dashboard
                     </span>
                   </div>
                   <div className="grid grid-cols-3 gap-4">
@@ -253,15 +253,15 @@ export default function LandingPage() {
                       border: "1px solid rgba(255, 255, 255, 0.1)",
                     }}
                   >
-                    E
+                    R
                   </div>
                   <span className="text-[17px] font-bold text-white tracking-[-0.02em]">
-                    EmbodiedAITaskPlanner
+                    Robotic Planning with Gemini
                   </span>
                 </div>
                 <p className="text-[14px] leading-[1.7] max-w-[300px]" style={{ color: "#666" }}>
-                  Indoor spatial intelligence for embodied AI and autonomous
-                  navigation.
+                  Robotic Planning with Gemini — indoor spatial intelligence and
+                  autonomous navigation.
                 </p>
               </div>
 
@@ -292,7 +292,7 @@ export default function LandingPage() {
                       GitHub
                     </a>
                     <a
-                      href="mailto:contact@embodiedai.dev"
+                      href="mailto:contact@rpg.dev"
                       className="text-[14px] hover:text-white transition-colors flex items-center gap-2"
                       style={{ color: "#888" }}
                     >
@@ -309,10 +309,10 @@ export default function LandingPage() {
               style={{ borderTop: "1px solid rgba(255, 255, 255, 0.04)" }}
             >
               <p className="text-[13px]" style={{ color: "#555" }}>
-                &copy; {new Date().getFullYear()} EmbodiedAITaskPlanner. All rights reserved.
+                &copy; {new Date().getFullYear()} Robotic Planning with Gemini. All rights reserved.
               </p>
               <p className="text-[13px] italic" style={{ color: "#555" }}>
-                Spatial intelligence, unbounded.
+                Robotic Planning with Gemini.
               </p>
             </div>
           </div>
