@@ -29,5 +29,8 @@ Thumbs.db
 # API test
 API_TEST.py
 
+# VLA cache (file-based cache keyed by image filenames)
+backend/cache/
+
 # Reference / personal files
 spatial-ai-node-analyzer/

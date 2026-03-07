@@ -66,6 +66,8 @@ def call_planner_model(prompt: str) -> dict:
     data = json.loads(text)
     if isinstance(data, list) and data:
         return data[0] if isinstance(data[0], dict) else {"subtasks": [], "dependency_graph": {"nodes": [], "edges": []}}
+    if isinstance(data, dict):
+        print(f"[planner] call_planner_model response: task_id={data.get('task_id')}, subtasks={len(data.get('subtasks', []))}")
     return data if isinstance(data, dict) else {"subtasks": [], "dependency_graph": {"nodes": [], "edges": []}}
 
 
@@ -175,21 +177,36 @@ def apply_deterministic_grounding(
 
 def generate_task_dag(topology, locations, goal, node_name, use_mock=False) -> PlannerOutput:
     """Generate a grounded task DAG for the goal using topology and locations."""
+    print(f"[planner] generate_task_dag: goal={goal!r}, node_name={node_name!r}, use_mock={use_mock}, locations_count={len(locations) if locations else 0}")
     grounded_context = build_grounded_context(topology, locations)
+    context_keys = list(grounded_context.keys()) if isinstance(grounded_context, dict) else "?"
+    print(f"[planner] Grounded context keys: {context_keys}")
     prompt_context = build_planner_user_prompt(goal, grounded_context, node_name)
+    print(f"[planner] User prompt length: {len(prompt_context)} chars")
 
     if use_mock:
+        print("[planner] Using mock planner output")
         raw_output = load_mock_planner_output(goal)
         model_name = "mock"
     else:
+        print(f"[planner] Calling planner model ({MODEL_PLANNER})...")
         raw_output = call_planner_model(prompt_context)
         model_name = MODEL_PLANNER
 
+    raw_subtasks = raw_output.get("subtasks", []) if isinstance(raw_output, dict) else []
+    print(f"[planner] Raw output: {len(raw_subtasks)} subtasks, task_id={raw_output.get('task_id', 'N/A') if isinstance(raw_output, dict) else 'N/A'}")
+
     planner_output = parse_planner_output(raw_output, goal, node_name)
+    print(f"[planner] Parsed: task_id={planner_output.task_id!r}, subtasks={len(planner_output.subtasks)}")
     planner_output = apply_deterministic_grounding(planner_output, grounded_context)
     validation = validate_planner_output(planner_output, grounded_context)
+    print(f"[planner] Validation: valid={validation.valid}, errors={len(validation.errors)}, warnings={len(validation.warnings)}")
+    if validation.errors:
+        for err in validation.errors:
+            print(f"[planner]   - {err}")
 
     if not validation.valid and not use_mock:
+        print("[planner] Validation failed, attempting repair...")
         repaired_raw = call_planner_repair_model(
             json.dumps(raw_output),
             validation.errors,
@@ -200,6 +217,7 @@ def generate_task_dag(topology, locations, goal, node_name, use_mock=False) -> P
         planner_output = parse_planner_output(repaired_raw, goal, node_name)
         planner_output = apply_deterministic_grounding(planner_output, grounded_context)
         validation = validate_planner_output(planner_output, grounded_context)
+        print(f"[planner] After repair: valid={validation.valid}, errors={len(validation.errors)}")
 
     planner_output.warnings.extend(validation.warnings)
     planner_output.planner_trace = PlannerTrace(
@@ -208,4 +226,5 @@ def generate_task_dag(topology, locations, goal, node_name, use_mock=False) -> P
         validation_passed=validation.valid,
         errors=validation.errors,
     )
+    print(f"[planner] Returning PlannerOutput: task_id={planner_output.task_id!r}, subtasks={len(planner_output.subtasks)}, validation_passed={validation.valid}")
     return planner_output

@@ -45,7 +45,9 @@ def get_goal_or_question(
     if not client:
         raise ValueError("GenAI client not initialized.")
 
+    print(f"[plan_qa] get_goal_or_question: node_name={node_name!r}, message={message[:60]!r}{'...' if len(message) > 60 else ''}, history_len={len(history)}")
     summary = _topology_summary(topology)
+    print(f"[plan_qa] Topology summary length: {len(summary)} chars, room={topology.get('node_name', '?')!r}")
 
     system = """You are helping a user create a task plan for an embodied AI in a single room.
 You have access to the room's topology (anchors and objects). Your job is to decide:
@@ -74,6 +76,7 @@ Conversation so far:
 
 Reply with JSON only: either {{"goal": "..."}} or {{"question": "..."}}."""
 
+    print(f"[plan_qa] Calling LLM (model={MODEL_CHAT}) for goal vs question...")
     response = generate_content_with_retry(
         client,
         model=MODEL_CHAT,
@@ -85,14 +88,19 @@ Reply with JSON only: either {{"goal": "..."}} or {{"question": "..."}}."""
     )
 
     text = (response.text or "{}").strip()
+    print(f"[plan_qa] LLM raw response (first 200 chars): {text[:200]!r}")
     try:
         data = json.loads(text)
     except json.JSONDecodeError:
+        print("[plan_qa] JSON decode failed, returning default question")
         return {"question": "What task would you like me to plan?"}
 
     if isinstance(data, dict):
         if data.get("goal") and isinstance(data["goal"], str) and data["goal"].strip():
+            print(f"[plan_qa] Result: goal={data['goal'].strip()!r}")
             return {"goal": data["goal"].strip()}
         if data.get("question") and isinstance(data["question"], str):
+            print(f"[plan_qa] Result: question={data['question'].strip()!r}")
             return {"question": data["question"].strip()}
+    print("[plan_qa] Result: no valid goal/question, returning default question")
     return {"question": "What task would you like me to plan?"}

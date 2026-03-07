@@ -8,6 +8,15 @@ from pydantic import BaseModel
 from vla_service import VLAService
 from planner import PlannerRequest, generate_task_dag
 from plan_qa import get_goal_or_question
+from cache import (
+    get_cache_key,
+    load_topology,
+    save_topology,
+    load_layout,
+    save_layout,
+    load_map,
+    save_map,
+)
 
 app = FastAPI(title="Embodied AI Task Planner Backend")
 
@@ -43,7 +52,7 @@ class PlanQAPayload(BaseModel):
     message: str
     node_name: str
     history: List[Dict[str, str]] = []
-    use_mock: bool = True
+    use_mock: bool = False
 
 
 @app.post("/api/upload-node")
@@ -51,28 +60,47 @@ async def upload_node(
     node_name: str = Form(...),
     images: List[UploadFile] = File(...)
 ):
+    filenames: List[str] = []
     gemini_images = []
     for img in images:
         content = await img.read()
+        filenames.append(img.filename or "")
         gemini_images.append({
             "mime_type": img.content_type,
             "data": base64.b64encode(content).decode('utf-8')
         })
 
-    try:
-        # ── Step 1: Topology Extraction ──
-        print(f"[Step 1/3] Extracting topology for '{node_name}'...")
-        actual_name, topology = VLAService.extract_topology(gemini_images, node_name)
-        print(f"[Step 1/3] ✓ Topology extracted: {actual_name}")
+    cache_key = get_cache_key(filenames)
 
-        # ── Step 2: Bird's-Eye Map Generation ──
-        print(f"[Step 2/3] Generating bird's-eye view map...")
-        try:
-            map_image = VLAService.generate_birds_eye_view(gemini_images, topology)
-            print(f"[Step 2/3] ✓ Map generated successfully")
-        except Exception as e:
-            print(f"[Step 2/3] ⚠ Map generation failed: {e}, using placeholder")
-            map_image = "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=1000"
+    try:
+        # ── Step 1: Topology (cache or API) ──
+        cached_topology = load_topology(cache_key)
+        if cached_topology is not None:
+            actual_name, topology = cached_topology
+            print(f"[Step 1/3] ✓ Topology from cache: {actual_name}")
+        else:
+            print(f"[Step 1/3] Extracting topology for '{node_name}'...")
+            actual_name, topology = VLAService.extract_topology(gemini_images, node_name)
+            save_topology(cache_key, actual_name, topology)
+            print(f"[Step 1/3] ✓ Topology extracted: {actual_name}")
+
+        # ── Step 2: Bird's-Eye Map (cache or layout + image API) ──
+        map_image = load_map(cache_key)
+        if map_image is not None:
+            print(f"[Step 2/3] ✓ Map from cache")
+        else:
+            print(f"[Step 2/3] Generating bird's-eye view map...")
+            try:
+                layout_text = load_layout(cache_key)
+                if layout_text is None:
+                    layout_text = VLAService.extract_layout_description(gemini_images, topology)
+                    save_layout(cache_key, layout_text)
+                map_image = VLAService.generate_birds_eye_image_from_layout(layout_text)
+                save_map(cache_key, map_image)
+                print(f"[Step 2/3] ✓ Map generated successfully")
+            except Exception as e:
+                print(f"[Step 2/3] ⚠ Map generation failed: {e}, using placeholder")
+                map_image = "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=1000"
 
         # ── Step 3: Spatial Localization ──
         locations = []
@@ -141,18 +169,24 @@ async def chat(payload: ChatPayload):
 
 @app.post("/api/plan-qa")
 async def plan_qa(payload: PlanQAPayload):
+    print(f"[plan-qa] Request: message={payload.message[:80]!r}{'...' if len(payload.message) > 80 else ''}, node_name={payload.node_name!r}, history_len={len(payload.history)}, use_mock={payload.use_mock}")
     topology = node_data.get(payload.node_name)
     if not topology:
         if node_data:
             payload.node_name = list(node_data.keys())[-1]
             topology = node_data[payload.node_name]
+            print(f"[plan-qa] Node not found, using latest: node_name={payload.node_name!r}")
         else:
+            print("[plan-qa] No topology: returning error (no environment data)")
             return {
                 "status": "error",
                 "message": "No environment data available. Process a node first.",
             }
+    else:
+        print(f"[plan-qa] Topology resolved for node_name={payload.node_name!r}")
 
     try:
+        print("[plan-qa] Calling get_goal_or_question(...)")
         result = get_goal_or_question(
             history=payload.history,
             message=payload.message,
@@ -160,32 +194,41 @@ async def plan_qa(payload: PlanQAPayload):
             topology=topology,
         )
     except Exception as e:
-        print(f"Plan QA Error (goal/question): {e}")
+        print(f"[plan-qa] Plan QA Error (goal/question): {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
     if "goal" in result:
+        goal = result["goal"]
+        print(f"[plan-qa] Goal extracted: {goal!r}")
         locations = node_locations.get(payload.node_name, [])
+        print(f"[plan-qa] Locations count: {len(locations)}")
         try:
+            print("[plan-qa] Calling generate_task_dag(...)")
             plan_result = generate_task_dag(
                 topology=topology,
                 locations=locations,
-                goal=result["goal"],
+                goal=goal,
                 node_name=payload.node_name,
                 use_mock=payload.use_mock,
             )
         except Exception as e:
-            print(f"Plan QA Error (generate_task_dag): {e}")
+            print(f"[plan-qa] Plan QA Error (generate_task_dag): {e}")
             return {"status": "error", "message": str(e)}
+        print(f"[plan-qa] Plan generated: task_id={plan_result.task_id!r}, subtasks={len(plan_result.subtasks)}, validation_passed={getattr(plan_result.planner_trace, 'validation_passed', None)}")
         if plan_result.planner_trace and not plan_result.planner_trace.validation_passed:
+            print(f"[plan-qa] Validation failed: errors={plan_result.planner_trace.errors}")
             return {
                 "status": "error",
                 "message": "Planner validation failed",
                 "errors": plan_result.planner_trace.errors,
             }
         planning_runs[plan_result.task_id] = plan_result.model_dump()
+        print(f"[plan-qa] Returning status=plan, task_id={plan_result.task_id!r}")
         return {"status": "plan", "plan": plan_result.model_dump()}
 
-    return {"status": "question", "text": result.get("question", "What task would you like me to plan?")}
+    question = result.get("question", "What task would you like me to plan?")
+    print(f"[plan-qa] Returning status=question: {question!r}")
+    return {"status": "question", "text": question}
 
 
 @app.post("/api/query-planner")
@@ -246,7 +289,8 @@ async def task_plan(payload: PlannerRequest):
         locations=locations,
         goal=payload.goal,
         node_name=payload.node_name,
-        use_mock=payload.use_mock,
+        # use_mock=payload.use_mock,
+        use_mock=False,
     )
     if result.planner_trace and not result.planner_trace.validation_passed:
         raise HTTPException(
