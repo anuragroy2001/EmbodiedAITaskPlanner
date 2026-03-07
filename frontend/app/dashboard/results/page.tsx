@@ -100,8 +100,12 @@ export default function ResultsPage() {
           style={{ minHeight: "calc(100vh - 72px - 56px)" }}>
 
           {/* Visualization */}
-          <div className="lg:col-span-9 surface-card rounded-2xl overflow-hidden flex flex-col animate-fade-in-up"
-            style={{ minHeight: "calc(100vh - 72px - 56px - 64px)", animationDelay: '0.1s', animationFillMode: 'both' }}>
+          <div className="lg:col-span-8 surface-card rounded-2xl overflow-hidden flex flex-col animate-fade-in-up"
+            style={{
+              minHeight: "calc(100vh - 72px - 56px - 64px)",
+              animationDelay: '0.1s',
+              animationFillMode: 'both',
+            }}>
             {topology ? (
               <>
                 <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border)' }}>
@@ -158,7 +162,7 @@ export default function ResultsPage() {
           </div>
 
           {/* Chat */}
-          <div className="lg:col-span-3 animate-fade-in-up" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
+          <div className="lg:col-span-4 flex flex-col min-h-0 animate-fade-in-up" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
             <CommandBarComponent topology={topology} systemLogs={systemLogs} />
           </div>
         </main>

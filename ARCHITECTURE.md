@@ -10,7 +10,7 @@ graph TD
         UI["Main Dashboard (page.tsx)"]
         CAP["Node Capture (8-Photo Upload)"]
         MAP["Interactive 2D Map (SVG Bounding Boxes)"]
-        CHAT["Spatial Query & System Terminal"]
+        CHAT["Plan Q&A & System Terminal"]
         SET["Robot Settings (ROS2 Config)"]
     end
 

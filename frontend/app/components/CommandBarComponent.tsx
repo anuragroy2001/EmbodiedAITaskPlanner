@@ -1,8 +1,18 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Terminal, Send, MessageSquare, Loader2, ListChecks } from "lucide-react";
-import { api, SpatialNode, PlannerOutput } from "../lib/api";
+import { Terminal, Send, MessageSquare, Loader2 } from "lucide-react";
+import { api, SpatialNode, PlannerOutput, PlanSummary } from "../lib/api";
+import { getCookie, setCookie, ROBOT_TYPE_COOKIE } from "../lib/cookies";
+import { HumanoidSvgContent, QuadrupedSvgContent, MobileBaseSvgContent } from "./RobotTypeIcons";
+import InteractivePlanView from "./InteractivePlanView";
+
+const ROBOT_TYPE_OPTIONS = [
+  { value: "humanoid" as const, label: "Humanoid", Icon: HumanoidSvgContent },
+  { value: "quadrupeds" as const, label: "Quadrupeds", Icon: QuadrupedSvgContent },
+  { value: "mobile base" as const, label: "Mobile base", Icon: MobileBaseSvgContent },
+] as const;
+type RobotTypeValue = (typeof ROBOT_TYPE_OPTIONS)[number]["value"];
 
 interface CommandBarProps {
     topology: SpatialNode | null;
@@ -14,9 +24,18 @@ export default function CommandBarComponent({ topology, systemLogs }: CommandBar
     const [chatInput, setChatInput] = useState("");
     const [isChatting, setIsChatting] = useState(false);
     const [showTerminal, setShowTerminal] = useState(false);
+    const [robotType, setRobotType] = useState<RobotTypeValue>("humanoid");
     const [latestPlan, setLatestPlan] = useState<PlannerOutput | null>(null);
+    const [latestPlanSummary, setLatestPlanSummary] = useState<PlanSummary | null>(null);
     const chatEndRef = useRef<HTMLDivElement>(null);
     const terminalEndRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const stored = getCookie(ROBOT_TYPE_COOKIE);
+        if (stored && ROBOT_TYPE_OPTIONS.some(o => o.value === stored)) {
+            setRobotType(stored as RobotTypeValue);
+        }
+    }, []);
 
     useEffect(() => {
         if (terminalEndRef.current) {
@@ -46,6 +65,7 @@ export default function CommandBarComponent({ topology, systemLogs }: CommandBar
                 setChatHistory(prev => [...prev, { role: 'model', text: data.text }]);
             } else if (data.status === "plan") {
                 setLatestPlan(data.plan);
+                setLatestPlanSummary(data.plan_summary);
                 setChatHistory(prev => [...prev, { role: 'model', text: `Here's your plan: ${data.plan.goal}` }]);
             } else {
                 const errMsg = data.errors?.length ? `${data.message}: ${data.errors.join(", ")}` : data.message;
@@ -60,14 +80,14 @@ export default function CommandBarComponent({ topology, systemLogs }: CommandBar
     };
 
     return (
-        <div className="flex flex-col rounded-2xl overflow-hidden min-h-[280px] max-h-[380px] surface-card">
+        <div className="flex flex-col flex-1 min-h-0 rounded-2xl overflow-hidden surface-card">
             {/* Header */}
             <div className="px-4 py-2.5 flex items-center justify-between"
                 style={{ borderBottom: '1px solid var(--border)' }}>
                 <div className="flex items-center gap-2">
                     <MessageSquare className="w-3.5 h-3.5" style={{ color: 'var(--accent)' }} />
                     <h3 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>
-                        Spatial Query
+                        Plan Q&A
                     </h3>
                 </div>
 
@@ -105,8 +125,8 @@ export default function CommandBarComponent({ topology, systemLogs }: CommandBar
                 {chatHistory.length === 0 && (
                     <div className="text-center my-auto flex flex-col items-center gap-2" style={{ color: 'var(--text-muted)' }}>
                         <MessageSquare className="w-6 h-6 opacity-20" />
-                        <p className="text-[13px] font-medium">Ask about the environment</p>
-                        <p className="text-[11px] font-mono opacity-60">&quot;Where is the microwave?&quot;</p>
+                        <p className="text-[13px] font-medium">Describe a task to plan</p>
+                        <p className="text-[11px] font-mono opacity-60">&quot;e.g. Clean the kitchen&quot;</p>
                     </div>
                 )}
                 {chatHistory.map((msg, i) => (
@@ -125,32 +145,12 @@ export default function CommandBarComponent({ topology, systemLogs }: CommandBar
                         <div className="px-3 py-2 rounded-lg flex items-center gap-2"
                             style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
                             <Loader2 className="w-3 h-3 animate-spin" style={{ color: 'var(--text-muted)' }} />
-                            <span className="font-mono text-[12px]" style={{ color: 'var(--text-muted)' }}>Querying...</span>
+                            <span className="font-mono text-[12px]" style={{ color: 'var(--text-muted)' }}>Planning...</span>
                         </div>
                     </div>
                 )}
                 {latestPlan && (
-                    <div className="rounded-lg p-3 animate-fade-in"
-                        style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
-                        <div className="flex items-center gap-2 mb-2">
-                            <ListChecks className="w-3.5 h-3.5" style={{ color: 'var(--accent)' }} />
-                            <span className="text-[12px] font-bold" style={{ color: 'var(--text-primary)' }}>{latestPlan.goal}</span>
-                        </div>
-                        <p className="text-[10px] font-mono mb-2" style={{ color: 'var(--text-muted)' }}>
-                            {latestPlan.room} · {latestPlan.subtasks.length} subtasks, {latestPlan.dependency_graph.edges.length} dependencies
-                        </p>
-                        <ul className="space-y-1.5">
-                            {latestPlan.subtasks.map(st => (
-                                <li key={st.id} className="text-[11px] leading-snug"
-                                    style={{ color: 'var(--text-primary)', borderLeft: '2px solid var(--accent)', paddingLeft: 8 }}>
-                                    <span className="font-mono font-medium">{st.id}</span> {st.action}: {st.description}
-                                    {st.depends_on.length > 0 && (
-                                        <span className="font-mono opacity-70" style={{ color: 'var(--text-muted)' }}> (after {st.depends_on.join(", ")})</span>
-                                    )}
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
+                    <InteractivePlanView plan={latestPlan} planSummary={latestPlanSummary} />
                 )}
                 <div ref={chatEndRef} />
             </div>
@@ -174,25 +174,54 @@ export default function CommandBarComponent({ topology, systemLogs }: CommandBar
             )}
 
             {/* Input */}
-            <form onSubmit={handleChatSubmit} className="px-3 py-2.5 flex gap-2"
+            <form onSubmit={handleChatSubmit} className="px-3 py-2.5 flex flex-col gap-2"
                 style={{ borderTop: '1px solid var(--border)' }}>
-                <input
-                    type="text"
-                    value={chatInput}
-                    onChange={e => setChatInput(e.target.value)}
-                    placeholder={topology ? "Ask about the environment..." : "Process a node first"}
-                    className="flex-1 rounded-lg px-3 py-1.5 text-[13px] transition-colors"
-                    style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
-                    disabled={isChatting || !topology}
-                />
-                <button
-                    type="submit"
-                    disabled={isChatting || !chatInput.trim() || !topology}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center disabled:opacity-30 transition-all"
-                    style={{ background: 'var(--accent)', color: '#09090B' }}
-                >
-                    <Send className="w-3.5 h-3.5" />
-                </button>
+                <div className="flex gap-2 items-center">
+                    <input
+                        type="text"
+                        value={chatInput}
+                        onChange={e => setChatInput(e.target.value)}
+                        placeholder={topology ? "Describe a task to plan..." : "Process a node first"}
+                        className="flex-1 min-w-0 rounded-lg px-3 py-1.5 text-[13px] transition-colors"
+                        style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                        disabled={isChatting || !topology}
+                    />
+                    <button
+                        type="submit"
+                        disabled={isChatting || !chatInput.trim() || !topology}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center disabled:opacity-30 transition-all shrink-0"
+                        style={{ background: 'var(--accent)', color: '#09090B' }}
+                    >
+                        <Send className="w-3.5 h-3.5" />
+                    </button>
+                </div>
+                <div className="flex gap-2">
+                    {ROBOT_TYPE_OPTIONS.map((opt) => {
+                        const Icon = opt.Icon;
+                        const isSelected = robotType === opt.value;
+                        return (
+                            <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() => {
+                                    setRobotType(opt.value);
+                                    setCookie(ROBOT_TYPE_COOKIE, opt.value, { maxAge: 365 * 24 * 60 * 60, path: "/" });
+                                }}
+                                title={opt.label}
+                                className="flex-1 flex items-center justify-center rounded-lg py-1.5 px-2 transition-all shrink-0"
+                                style={{
+                                    background: isSelected ? 'var(--accent-dim)' : 'var(--bg-secondary)',
+                                    border: `1px solid ${isSelected ? 'var(--accent)' : 'var(--border)'}`,
+                                    color: isSelected ? 'var(--accent)' : 'var(--text-muted)',
+                                }}
+                            >
+                                <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-7 h-7">
+                                    <Icon />
+                                </svg>
+                            </button>
+                        );
+                    })}
+                </div>
             </form>
         </div>
     );

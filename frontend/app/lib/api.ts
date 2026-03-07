@@ -16,9 +16,16 @@ export interface ObjectLocation {
 }
 
 /** Plan QA response: either a follow-up question or a full task plan */
+export interface PlanSummary {
+    goal: string;
+    room: string;
+    subtask_count: number;
+    dependency_count: number;
+}
+
 export type PlanQAResponse =
     | { status: "question"; text: string }
-    | { status: "plan"; plan: PlannerOutput }
+    | { status: "plan"; plan: PlannerOutput; plan_summary: PlanSummary }
     | { status: "error"; message: string; errors?: string[] };
 
 export interface TaskLocation {
@@ -52,6 +59,7 @@ export interface PlannerOutput {
     dependency_graph: DependencyGraph;
     warnings: string[];
     planner_trace?: { mode: string; model: string; validation_passed: boolean; errors: string[] };
+    execution_order?: string[];
 }
 
 export const api = {
@@ -84,17 +92,6 @@ export const api = {
             body: JSON.stringify({ query, node_name: nodeName, history }),
         });
         return res.json();
-    },
-
-    planQa: async (message: string, nodeName: string, history: { role: string; text: string }[]): Promise<PlanQAResponse> => {
-        const res = await fetch(`${API_BASE_URL}/plan-qa`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message, node_name: nodeName, history }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || "Plan QA request failed");
-        return data;
     },
 
     planQa: async (message: string, nodeName: string, history: { role: string; text: string }[]): Promise<PlanQAResponse> => {

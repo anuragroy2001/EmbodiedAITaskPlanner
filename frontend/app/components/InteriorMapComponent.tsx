@@ -140,15 +140,16 @@ export default function InteriorMapComponent({
             <img src={mapImage} alt="Floor Plan" className="w-full h-full object-contain" />
 
             {/* Bounding boxes */}
-            {locations?.map(loc => {
+            {locations?.map((loc, index) => {
                 const isHovered = hoveredId === loc.object_id;
                 const isSelected = selectedObjectId === loc.object_id;
                 const label = getObjectLabel(loc.object_id);
                 const hasSource = getImageIndices(loc.object_id).length > 0;
+                const uniqueKey = `${loc.object_id}-${index}`;
 
                 return (
                     <div
-                        key={loc.object_id}
+                        key={uniqueKey}
                         onMouseEnter={() => setHoveredId(loc.object_id)}
                         onMouseLeave={() => setHoveredId(null)}
                         onClick={(e) => { e.stopPropagation(); handleObjectClick(loc.object_id); }}
