@@ -75,7 +75,7 @@ export default function ResultsPage() {
           background: isDark ? 'rgba(12, 12, 12, 0.65)' : 'var(--bg-primary)',
           backdropFilter: 'blur(24px)',
         }}>
-          <div className="max-w-[1400px] mx-auto px-8 h-[72px] flex items-center justify-between">
+          <div className="max-w-[1600px] mx-auto px-8 h-[72px] flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Link href="/dashboard"
                 className="w-10 h-10 rounded-xl flex items-center justify-center transition-colors"
@@ -130,13 +130,12 @@ export default function ResultsPage() {
         </header>
 
         {/* MAIN */}
-        <main className="max-w-[1400px] mx-auto px-8 py-8 grid grid-cols-1 lg:grid-cols-12 gap-6"
+        <main className="max-w-[1600px] mx-auto px-8 py-8 grid grid-cols-1 lg:grid-cols-12 gap-6"
           style={{ minHeight: "calc(100vh - 72px - 56px)" }}>
 
           {/* Visualization */}
-          <div className="lg:col-span-8 surface-card rounded-2xl overflow-hidden flex flex-col animate-fade-in-up"
-            style={{ minHeight: "calc(100vh - 72px - 56px - 64px)" }}
-            style={{ animationDelay: '0.1s', animationFillMode: 'both' }}>
+          <div className="lg:col-span-9 surface-card rounded-2xl overflow-hidden flex flex-col animate-fade-in-up"
+            style={{ minHeight: "calc(100vh - 72px - 56px - 64px)", animationDelay: '0.1s', animationFillMode: 'both' }}>
             {topology ? (
               <>
                 <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border)' }}>
@@ -193,7 +192,7 @@ export default function ResultsPage() {
           </div>
 
           {/* Chat */}
-          <div className="lg:col-span-4 animate-fade-in-up" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
+          <div className="lg:col-span-3 animate-fade-in-up" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
             <CommandBarComponent topology={topology} systemLogs={systemLogs} />
           </div>
         </main>
@@ -204,7 +203,7 @@ export default function ResultsPage() {
           background: isDark ? 'rgba(12, 12, 12, 0.4)' : 'var(--bg-primary)',
           backdropFilter: 'blur(16px)',
         }}>
-          <div className="max-w-[1400px] mx-auto px-8 h-14 flex items-center text-[12px]"
+          <div className="max-w-[1600px] mx-auto px-8 h-14 flex items-center text-[12px]"
             style={{ color: 'var(--text-muted)' }}>
             <span className="font-semibold">EmbodiedAITaskPlanner</span>
           </div>
