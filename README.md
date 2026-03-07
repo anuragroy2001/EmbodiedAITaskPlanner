@@ -18,9 +18,9 @@ The system operates entirely from photographs. No LiDAR, no SLAM, no prior map d
 
 RPG treats every environment as unknown. There is no reliance on pre-existing maps, object databases, or spatial priors. The full perception-to-plan pipeline runs from raw imagery:
 
-1. **Topology extraction** — Sequential photographs are encoded and sent as a single multimodal prompt to Gemini. The model returns structured JSON containing a descriptive node name, static anchors (immovable structures and heavy furniture), dynamic objects (movable items), and navigable edges (pathways out of the area). Each entity includes a specific type label, natural-language description, and the image indices where it was observed.
+1. **Scene decomposition** — Sequential photographs are encoded and sent as a single multimodal prompt to Gemini. The model returns structured JSON containing a descriptive node name, static anchors (immovable structures and heavy furniture), dynamic objects (movable items), and navigable edges (pathways out of the area). Each entity includes a specific type label, natural-language description, and the image indices where it was observed.
 
-2. **Text-bridge mapping** — To generate an accurate 2D floor plan without 3D hallucination, RPG introduces a two-stage text bridge. First, Gemini receives the photographs alongside the extracted topology and produces a purely textual architectural layout description — room shape, relative 2D positions of all entities, no colors or lighting. This text-only representation is then passed to an image-generation model to synthesize an orthographic, top-down blueprint. Decoupling perception from generation prevents the image model from producing perspective views or inventing spatial structure not present in the source photos.
+2. **Layout synthesis** — To generate an accurate 2D floor plan without 3D hallucination, RPG uses a two-stage abstraction process. First, Gemini receives the photographs alongside the decomposed scene and produces a purely textual architectural layout description — room shape, relative 2D positions of all entities, no colors or lighting. This text-only representation is then passed to an image-generation model to synthesize an orthographic, top-down blueprint. Decoupling perception from generation prevents the image model from producing perspective views or inventing spatial structure not present in the source photos.
 
 3. **Object localization** — The generated floor plan image and the full entity list are sent to a vision model, which returns normalized bounding boxes (0–100% of image dimensions) for each anchor and object. These coordinates are merged with the topology to produce a **grounded context**: every entity the planner can reference has an ID, type, description, and optional map position.
 
@@ -155,7 +155,7 @@ Backend (FastAPI / Uvicorn / Python 3.10+)                 :8000
 
 | Module | Responsibility |
 |---|---|
-| `vla_service.py` | Topology extraction, layout description, map generation, object localization, multimodal chat |
+| `vla_service.py` | Scene decomposition, layout synthesis, map generation, object localization, multimodal chat |
 | `plan_qa.py` | Conversational goal extraction with follow-up question logic |
 | `planner/planner_service.py` | End-to-end DAG generation: context assembly, model call, parsing, grounding, validation, repair |
 | `planner/planner_prompts.py` | Per-embodiment system prompts, allowed action vocabularies, prompt construction |
@@ -170,8 +170,8 @@ Backend (FastAPI / Uvicorn / Python 3.10+)                 :8000
 
 | Pipeline Stage | Model | Output |
 |---|---|---|
-| Topology extraction | `gemini-3-flash-preview` | Structured JSON (anchors, objects, edges) |
-| Layout description | `gemini-3-flash-preview` | Textual 2D architectural layout |
+| Scene decomposition | `gemini-3-flash-preview` | Structured JSON (anchors, objects, edges) |
+| Layout synthesis | `gemini-3-flash-preview` | Textual 2D architectural layout |
 | Floor plan generation | `gemini-3.1-flash-image-preview` | Orthographic top-down blueprint image |
 | Object localization | `gemini-3-flash-preview` | Normalized bounding boxes (JSON) |
 | Spatial chat | `gemini-3-flash-preview` | Natural-language responses with spatial context |

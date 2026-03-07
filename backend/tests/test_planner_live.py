@@ -36,7 +36,7 @@ def main():
 
     from planner import generate_task_dag
 
-    # Sample topology (same shape as VLAService.extract_topology)
+    # Sample topology (same shape as VLAService.decompose_scene)
     topology = {
         "node_name": "kitchen_main",
         "static_anchors": [

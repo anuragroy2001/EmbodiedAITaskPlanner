@@ -106,7 +106,7 @@ async def upload_node(
             print(f"[Step 1/3] ✓ Topology from cache: {actual_name}")
         else:
             print(f"[Step 1/3] Extracting topology for '{node_name}'...")
-            actual_name, topology = VLAService.extract_topology(gemini_images, node_name)
+            actual_name, topology = VLAService.decompose_scene(gemini_images, node_name)
             save_topology(cache_key, actual_name, topology)
             print(f"[Step 1/3] ✓ Topology extracted: {actual_name}")
 

@@ -16,7 +16,7 @@ else:
     client = genai.Client(api_key=api_key)
 
 from model_config import (
-    MODEL_TOPOLOGY, MODEL_LAYOUT, MODEL_IMAGE, MODEL_LOCALIZATION,
+    MODEL_DECOMPOSITION, MODEL_LAYOUT, MODEL_IMAGE, MODEL_LOCALIZATION,
     MODEL_CHAT, MODEL_PLANNER
 )
 
@@ -27,9 +27,9 @@ and extract a structured topological understanding of this space."""
 
 class VLAService:
 
-    # ── Step 1: Topology Extraction ────────────────────────────────────
+    # ── Step 1: Scene Decomposition ─────────────────────────────────────
     @staticmethod
-    def extract_topology(gemini_images, default_node_name):
+    def decompose_scene(gemini_images, default_node_name):
         if not client:
             raise ValueError("GenAI client not initialized.")
 
@@ -60,7 +60,7 @@ Return STRICT JSON with keys: node_name, static_anchors, dynamic_objects, naviga
         parts.append(prompt)
 
         response = client.models.generate_content(
-            model=MODEL_TOPOLOGY,
+            model=MODEL_DECOMPOSITION,
             contents=parts,
             config=types.GenerateContentConfig(
                 system_instruction=SYSTEM_INSTRUCTION,
@@ -76,7 +76,7 @@ Return STRICT JSON with keys: node_name, static_anchors, dynamic_objects, naviga
         return actual_name, vla_result
 
     # ── Step 2: Bird's-Eye Map Generation ──────────────────────────────
-    # ── Step 2a: Extract Layout Description (Text-Bridge) ───────────────
+    # ── Step 2a: Extract Layout Description (Layout Synthesis) ──────────
     @staticmethod
     def extract_layout_description(gemini_images, topology):
         """Use a pro model to convert 8 photos into a pure TEXT layout description.
@@ -148,7 +148,7 @@ Layout details: {layout_text}"""
 
     @staticmethod
     def generate_birds_eye_view(gemini_images, topology):
-        """Two-step Text-Bridge: first extract layout text, then generate image from TEXT ONLY."""
+        """Two-step layout synthesis: first extract layout text, then generate image from TEXT ONLY."""
         if not client:
             raise ValueError("GenAI client not initialized.")
 
