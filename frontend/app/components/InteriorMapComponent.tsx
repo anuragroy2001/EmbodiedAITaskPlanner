@@ -100,8 +100,7 @@ export default function InteriorMapComponent({
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             }).catch(() => {
-                // Intercept network failure for hackathon simulation
-                console.log("Simulated network bypass for hackathon.");
+                console.log("Simulated network bypass for demo.");
             });
 
             onAddSystemLog(`[SYSTEM] Successfully dispatched ${waypoints.length} waypoints to ROS2 Nav2 Action Server.`);

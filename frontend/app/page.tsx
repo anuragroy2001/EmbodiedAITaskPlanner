@@ -253,7 +253,7 @@ export default function Home() {
       {/* ═══════════════════ FOOTER ═══════════════════ */}
       <footer className="py-4" style={{ borderTop: `1px solid ${border}` }}>
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between font-mono" style={{ color: textMuted }}>
-          <span>Google Gemini Seoul Hackathon 2026</span>
+          <span>Embodied AI Task Planner</span>
           <span>Powered by Gemini VLA · Text-Bridge Architecture</span>
         </div>
       </footer>
