@@ -14,20 +14,6 @@ import {
 } from "lucide-react";
 
 export default function LandingPage() {
-import { useEffect } from "react";
-import Link from "next/link";
-import { motion } from "framer-motion";
-import {
-  ArrowRight,
-  Camera,
-  Map,
-  Scan,
-  Cpu,
-  Github,
-  Mail,
-} from "lucide-react";
-
-export default function LandingPage() {
   useEffect(() => {
     document.documentElement.removeAttribute("data-theme");
   }, []);
@@ -57,8 +43,6 @@ export default function LandingPage() {
               >
                 E
               </div>
-              <span className="text-[17px] font-bold tracking-[-0.02em] text-white">
-                EmbodiedAI
               <span className="text-[17px] font-bold tracking-[-0.02em] text-white">
                 EmbodiedAI
               </span>
