@@ -9,6 +9,7 @@ __pycache__/
 *.pyc
 *.pyo
 backend/venv/
+backend/.venv/
 
 # Node
 node_modules/
@@ -27,6 +28,9 @@ Thumbs.db
 
 # API test
 API_TEST.py
+
+# VLA cache (file-based cache keyed by image filenames)
+backend/cache/
 
 # Reference / personal files
 spatial-ai-node-analyzer/

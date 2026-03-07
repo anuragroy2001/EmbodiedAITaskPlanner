@@ -1,0 +1,48 @@
+{
+  "task_id": "task_clean_kitchen_mock",
+  "goal": "Clean this kitchen",
+  "room": "kitchen_main",
+  "subtasks": [
+    {
+      "id": "t1",
+      "action": "collect",
+      "description": "Collect dirty mugs from the counter",
+      "objects": ["mug_1"],
+      "location": null,
+      "duration_estimate_sec": 20,
+      "depends_on": [],
+      "preconditions": [],
+      "success_criteria": ["mug_1 is no longer on the counter"]
+    },
+    {
+      "id": "t2",
+      "action": "transport",
+      "description": "Carry mugs to the sink",
+      "objects": ["mug_1", "sink_1"],
+      "location": null,
+      "duration_estimate_sec": 15,
+      "depends_on": ["t1"],
+      "preconditions": ["mug_1 collected"],
+      "success_criteria": ["mugs are at the sink"]
+    },
+    {
+      "id": "t3",
+      "action": "wash",
+      "description": "Wash dishes in the sink",
+      "objects": ["sink_1"],
+      "location": null,
+      "duration_estimate_sec": 60,
+      "depends_on": ["t2"],
+      "preconditions": ["Dishes at sink"],
+      "success_criteria": ["Dishes are clean"]
+    }
+  ],
+  "dependency_graph": {
+    "nodes": ["t1", "t2", "t3"],
+    "edges": [
+      {"source": "t2", "target": "t1"},
+      {"source": "t3", "target": "t2"}
+    ]
+  },
+  "warnings": []
+}

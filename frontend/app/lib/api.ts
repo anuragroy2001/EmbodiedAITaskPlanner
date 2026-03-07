@@ -15,6 +15,45 @@ export interface ObjectLocation {
     xmax: number;
 }
 
+/** Plan QA response: either a follow-up question or a full task plan */
+export type PlanQAResponse =
+    | { status: "question"; text: string }
+    | { status: "plan"; plan: PlannerOutput }
+    | { status: "error"; message: string; errors?: string[] };
+
+export interface TaskLocation {
+    x: number;
+    y: number;
+    label?: string;
+}
+
+export interface Subtask {
+    id: string;
+    action: string;
+    description: string;
+    objects: string[];
+    location?: TaskLocation | null;
+    duration_estimate_sec?: number | null;
+    depends_on: string[];
+    preconditions: string[];
+    success_criteria: string[];
+}
+
+export interface DependencyGraph {
+    nodes: string[];
+    edges: { source: string; target: string }[];
+}
+
+export interface PlannerOutput {
+    task_id: string;
+    goal: string;
+    room: string;
+    subtasks: Subtask[];
+    dependency_graph: DependencyGraph;
+    warnings: string[];
+    planner_trace?: { mode: string; model: string; validation_passed: boolean; errors: string[] };
+}
+
 export const api = {
     uploadNode: async (formData: FormData) => {
         const res = await fetch(`${API_BASE_URL}/upload-node`, {
@@ -45,6 +84,17 @@ export const api = {
             body: JSON.stringify({ query, node_name: nodeName, history }),
         });
         return res.json();
+    },
+
+    planQa: async (message: string, nodeName: string, history: { role: string; text: string }[]): Promise<PlanQAResponse> => {
+        const res = await fetch(`${API_BASE_URL}/plan-qa`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message, node_name: nodeName, history }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Plan QA request failed");
+        return data;
     },
 
     getNodeImages: async (nodeName: string) => {
