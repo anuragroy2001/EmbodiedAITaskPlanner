@@ -330,6 +330,18 @@ export default function SemanticGraph({ data }: SemanticGraphProps) {
             updateLabelPosition(d3.select(this) as any, d);
         });
 
+        // Initial view: fit all nodes in viewport with padding so first view is well distributed
+        const padding = 80;
+        const minX = Math.min(...nodes.map((n: any) => n.x)) - padding;
+        const maxX = Math.max(...nodes.map((n: any) => n.x)) + padding;
+        const minY = Math.min(...nodes.map((n: any) => n.y)) - padding;
+        const maxY = Math.max(...nodes.map((n: any) => n.y)) + padding;
+        const boxW = maxX - minX;
+        const boxH = maxY - minY;
+        const scale = Math.min(width / boxW, height / boxH, 2); // cap scale at 2 to avoid over-zooming
+        const tx = width / 2 - scale * (minX + maxX) / 2;
+        const ty = height / 2 - scale * (minY + maxY) / 2;
+        svg.call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
     }, [data]);
 
     const handleDownload = () => {
@@ -354,13 +366,6 @@ export default function SemanticGraph({ data }: SemanticGraphProps) {
         img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
     };
 
-    const legendItems = [
-        { color: PALETTE.root.fill, label: 'Root', shape: 'hex' },
-        { color: PALETTE.anchor.fill, label: 'Anchor', shape: 'diamond' },
-        { color: PALETTE.object.fill, label: 'Object', shape: 'square' },
-        { color: PALETTE.edge.fill, label: 'Edge', shape: 'triangle' },
-    ];
-
     return (
         <div className="w-full h-full relative overflow-hidden min-h-[420px]" style={{ background: BG }}>
             <button onClick={handleDownload}
@@ -370,21 +375,6 @@ export default function SemanticGraph({ data }: SemanticGraphProps) {
             </button>
 
             <svg ref={svgRef} className="w-full h-full absolute inset-0" />
-
-            <div className="absolute bottom-3 left-3 flex gap-4 px-4 py-2.5 rounded-xl text-[10px] font-mono z-10"
-                style={{ background: 'rgba(6,6,10,0.88)', border: '1px solid rgba(255,255,255,0.06)', backdropFilter: 'blur(12px)' }}>
-                {legendItems.map(item => (
-                    <div key={item.label} className="flex items-center gap-2">
-                        <svg width="10" height="10" viewBox="-6 -6 12 12">
-                            {item.shape === 'hex' && <polygon points={hexPath(5)} fill={item.color} opacity={0.7} />}
-                            {item.shape === 'diamond' && <polygon points={diamondPath(5)} fill={item.color} opacity={0.7} />}
-                            {item.shape === 'square' && <rect x={-4} y={-4} width={8} height={8} rx={2} fill={item.color} opacity={0.7} />}
-                            {item.shape === 'triangle' && <polygon points="-4,-5 5,0 -4,5" fill={item.color} opacity={0.7} />}
-                        </svg>
-                        <span style={{ color: item.color, opacity: 0.7 }}>{item.label}</span>
-                    </div>
-                ))}
-            </div>
 
             <div className="absolute top-3 left-3 px-3 py-1.5 rounded-lg text-[10px] font-mono z-10"
                 style={{ background: 'rgba(6,6,10,0.8)', border: '1px solid rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.25)' }}>

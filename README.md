@@ -16,6 +16,17 @@
 
 ---
 
+## Tech Stack
+
+| Layer | Technologies |
+|-------|---------------|
+| **Backend** | Python 3.10+, [FastAPI](https://fastapi.tiangolo.com/), [Uvicorn](https://www.uvicorn.org/), [google-genai](https://github.com/google/generative-ai-python) (Gemini SDK), [Pydantic](https://docs.pydantic.io/), [NetworkX](https://networkx.org/) (in-memory session graph), [python-dotenv](https://pypi.org/project/python-dotenv/), python-multipart |
+| **Frontend** | [Next.js 16](https://nextjs.org/) (App Router), [React 19](https://react.dev/), [TypeScript](https://www.typescriptlang.org/), [Tailwind CSS 4](https://tailwindcss.com/), [Axios](https://axios-http.com/) |
+| **UI & visualization** | [React Three Fiber](https://docs.pmnd.rs/react-three-fiber) + [Drei](https://github.com/pmndrs/drei) + [Three.js](https://threejs.org/) (3D), [D3](https://d3js.org/) (data viz), [React Flow](https://reactflow.dev/) (task DAG), [Framer Motion](https://www.framer.com/motion/), [Lucide React](https://lucide.dev/) (icons) |
+| **AI** | [Google Gemini](https://ai.google.dev/) — `gemini-3-flash-preview` (topology, layout, chat, plan QA, task planner), `gemini-3.1-flash-image-preview` (bird's-eye map image generation) |
+
+---
+
 ## Quick Start
 
 ### Prerequisites
@@ -41,7 +52,7 @@ echo GOOGLE_API_KEY=your_api_key_here > backend/.env
 cd backend
 python -m venv venv
 # source venv/bin/activate   # Mac/Linux
-# .\venv\Scripts\activate    # Windows
+# .\venv\Scripts\activate     # Windows
 pip install -r requirements.txt
 uvicorn main:app --reload
 ```
@@ -139,21 +150,26 @@ Together, this keeps generated plans within the chosen embodiment’s capabiliti
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  Frontend (Next.js)              http://localhost:3000           │
+│  Frontend (Next.js 16, React 19, TypeScript)   localhost:3000    │
 │  ┌──────────────┐ ┌──────────────┐ ┌──────────────────────────┐ │
-│  │ Select Robot │ │ MAP / GRAPH   │ │ Plan Q&A                  │ │
-│  │ Spatial      │ │ InteriorMap  │ │ Chat + InteractivePlanView│ │
-│  │ Capture      │ │ SemanticGraph│ │ (goal → task DAG)         │ │
+│  │ Select Robot │ │ MAP / GRAPH  │ │ Plan Q&A                  │ │
+│  │ Spatial      │ │ InteriorMap  │ │ CommandBar + Interactive  │ │
+│  │ Capture      │ │ SemanticGraph│ │ PlanView (goal → task DAG)│ │
+│  │ (NodeCapture)│ │ GraphViz     │ │ React Flow DAG            │ │
 │  └──────────────┘ └──────────────┘ └──────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────┘
          │                  │                        │
          ▼                  ▼                        ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│  Backend (FastAPI)                 http://localhost:8000          │
-│  POST /api/upload-node  →  3-step pipeline (topology, map, locs) │
-│  POST /api/chat          →  Spatial Q&A (map + topology + images)│
-│  POST /api/plan-qa       →  Goal vs question → task DAG (robot)  │
-│  POST /api/task-plan     →  Direct task DAG from goal + robot_type│
+│  Backend (FastAPI, Uvicorn)                localhost:8000         │
+│  POST /api/upload-node   → 3-step pipeline (topology, map, locs) │
+│  POST /api/chat         → Spatial Q&A (map + topology + images)  │
+│  POST /api/plan-qa      → Goal vs question → task DAG (robot)     │
+│  POST /api/task-plan    → Direct task DAG from goal + robot_type  │
+│  GET  /api/task-plan/{id} → Retrieve stored plan                  │
+│  POST /api/query-planner → Trajectory planning (multi-node)      │
+│  GET  /api/graph        → Session graph (nodes + edges)          │
+│  GET  /api/node/{id}    → Node topology                           │
 │  GET  /api/node/{id}/images → Source images for map UI           │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -165,32 +181,46 @@ Together, this keeps generated plans within the chosen embodiment’s capabiliti
 ```
 EmbodiedAIMapGeneration/
 ├── backend/
-│   ├── main.py                 # FastAPI app, upload/chat/plan-qa/task-plan
+│   ├── main.py                 # FastAPI app, CORS, all API routes
+│   ├── models.py               # Pydantic request models (e.g. QueryPayload)
 │   ├── vla_service.py          # Topology, layout, map image, localization, chat
 │   ├── plan_qa.py              # Goal vs question (Gemini)
 │   ├── model_config.py         # All Gemini model names (single place)
-│   ├── cache.py                # Topology/layout/map caching
+│   ├── cache.py                # Topology/layout/map caching (content hash)
 │   ├── genai_retry.py          # Rate-limit and 429 retry for Gemini
 │   ├── planner/
+│   │   ├── __init__.py         # PlannerRequest, generate_task_dag, schemas
 │   │   ├── planner_service.py  # generate_task_dag, Gemini + grounding + validation
-│   │   ├── planner_prompts.py # Robot-specific prompts and allowed actions
-│   │   ├── planner_schemas.py # PlannerOutput, Subtask, DependencyGraph, etc.
-│   │   ├── planner_normalization.py  # build_grounded_context, normalize topology/locations
-│   │   └── planner_validators.py     # DAG checks, action-robot validation
+│   │   ├── planner_prompts.py  # Robot-specific prompts and allowed actions
+│   │   ├── planner_schemas.py  # PlannerOutput, Subtask, DependencyGraph, etc.
+│   │   ├── planner_normalization.py  # build_grounded_context, resolve locations
+│   │   ├── planner_validators.py     # DAG checks, action-robot validation
+│   │   └── planner_mock_data/        # Optional mock planner JSON (e.g. cook_spaghetti)
 │   └── requirements.txt
 ├── frontend/
-│   └── app/
-│       ├── page.tsx            # Landing
-│       ├── select-robot/       # Robot type selection
-│       ├── dashboard/           # Capture (NodeCapture) and results (Map/Graph + Plan Q&A)
-│       ├── components/
-│       │   ├── NodeCaptureComponent.tsx
-│       │   ├── InteriorMapComponent.tsx  # Map, waypoints, plan overlay
-│       │   ├── SemanticGraph.tsx
-│       │   ├── CommandBarComponent.tsx  # Chat + plan request
-│       │   ├── InteractivePlanView.tsx
-│       │   └── ...
-│       └── lib/api.ts
+│   ├── app/
+│   │   ├── layout.tsx          # Root layout, fonts (Inter, JetBrains Mono, Plus Jakarta, Orbitron)
+│   │   ├── page.tsx            # Landing
+│   │   ├── globals.css         # Tailwind + global styles
+│   │   ├── select-robot/       # Robot type selection
+│   │   ├── dashboard/         # Capture (NodeCapture) + results entry
+│   │   │   └── results/        # Map, Graph, Plan Q&A (full dashboard)
+│   │   ├── components/
+│   │   │   ├── NodeCaptureComponent.tsx   # Photo upload, synthesize
+│   │   │   ├── InteriorMapComponent.tsx   # Bird's-eye map, waypoints, plan overlay
+│   │   │   ├── SemanticGraph.tsx          # Topology graph (D3 or similar)
+│   │   │   ├── GraphVisualizerComponent.tsx
+│   │   │   ├── CommandBarComponent.tsx   # Chat + plan request (Plan Q&A)
+│   │   │   ├── InteractivePlanView.tsx   # Task DAG (React Flow), execution order
+│   │   │   ├── RobotTypeIcons.tsx
+│   │   │   ├── RobotSettingsModal.tsx
+│   │   │   └── DigitalTwin.tsx
+│   │   └── lib/
+│   │       ├── api.ts          # API client (uploadNode, planQA, getGraph, etc.)
+│   │       └── cookies.ts      # Client-side persistence (e.g. robot type)
+│   ├── package.json            # Next 16, React 19, R3F, D3, React Flow, Framer Motion, Tailwind 4
+│   ├── next.config.ts
+│   └── tsconfig.json
 └── README.md
 ```
 

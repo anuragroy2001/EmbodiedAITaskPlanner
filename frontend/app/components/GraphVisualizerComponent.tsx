@@ -28,22 +28,32 @@ export default function GraphVisualizerComponent({ onNodeSelect }: GraphVisualiz
         try {
             const data = await api.getGraph();
 
-            const formattedNodes = data.nodes.map((n: any, i: number) => ({
-                id: n.id,
-                position: { x: (i % 5) * 200 + 50, y: Math.floor(i / 5) * 150 + 50 },
-                data: { label: n.id, vla: n.vla },
-                style: {
-                    background: '#0f172a',
-                    color: '#f8fafc',
-                    border: '1px solid #1e293b',
-                    borderRadius: '12px',
-                    padding: '12px 20px',
-                    minWidth: '140px',
-                    textAlign: 'center' as const,
-                    boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
-                    cursor: 'pointer'
-                }
-            }));
+            // Distribute nodes on a circle for a clear first view (well spread, then fitView frames them)
+            const count = data.nodes.length;
+            const centerX = 400;
+            const centerY = 300;
+            const radius = count <= 1 ? 0 : Math.max(120, 80 * Math.ceil(Math.sqrt(count)));
+            const formattedNodes = data.nodes.map((n: any, i: number) => {
+                const angle = count <= 1 ? 0 : (2 * Math.PI * i) / count - Math.PI / 2;
+                const x = centerX + radius * Math.cos(angle);
+                const y = centerY + radius * Math.sin(angle);
+                return {
+                    id: n.id,
+                    position: { x, y },
+                    data: { label: n.id, vla: n.vla },
+                    style: {
+                        background: '#0f172a',
+                        color: '#f8fafc',
+                        border: '1px solid #1e293b',
+                        borderRadius: '12px',
+                        padding: '12px 20px',
+                        minWidth: '140px',
+                        textAlign: 'center' as const,
+                        boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
+                        cursor: 'pointer'
+                    }
+                };
+            });
 
             const formattedEdges = data.edges.map((e: any) => ({
                 id: e.id,
@@ -89,6 +99,7 @@ export default function GraphVisualizerComponent({ onNodeSelect }: GraphVisualiz
                 onEdgesChange={onEdgesChange}
                 onNodeClick={onNodeClick}
                 fitView
+                fitViewOptions={{ padding: 0.2, maxZoom: 1.2 }}
             >
                 <Background gap={20} size={1} color="#1e293b" />
                 <Controls showInteractive={false} className="bg-gray-800 border-none fill-white" />

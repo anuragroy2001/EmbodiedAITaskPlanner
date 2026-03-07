@@ -40,15 +40,6 @@ export default function CapturePage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
-                style={{ border: '1px solid var(--border)' }}>
-                <span className="w-2 h-2 rounded-full animate-pulse-subtle" style={{ background: 'var(--success)', boxShadow: '0 0 8px rgba(74, 222, 128, 0.4)' }} />
-                <span className="text-[11px] font-semibold" style={{ color: 'var(--text-secondary)' }}>
-                  Online
-                </span>
-              </div>
-            </div>
           </div>
         </header>
 

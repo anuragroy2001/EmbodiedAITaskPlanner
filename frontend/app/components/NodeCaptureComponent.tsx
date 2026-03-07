@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Loader2, Camera, Upload, Plus, X, ArrowRight } from "lucide-react";
+import { Loader2, Camera, Upload, X, ArrowRight } from "lucide-react";
 import { api, SpatialNode, ObjectLocation } from "../lib/api";
 
 interface NodeCaptureProps {
@@ -100,10 +100,6 @@ export default function NodeCaptureComponent({ onGenerate }: NodeCaptureProps) {
         const newFiles = [...files];
         newFiles[index] = null;
         setFiles(newFiles);
-    };
-
-    const addSlot = () => {
-        setFiles(prev => [...prev, null]);
     };
 
     const generate = useCallback(async () => {
@@ -365,21 +361,7 @@ export default function NodeCaptureComponent({ onGenerate }: NodeCaptureProps) {
                     </label>
 
                     <button
-                        onClick={addSlot}
-                        className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all hover:scale-[1.02]"
-                        style={{
-                            background: "rgba(255, 255, 255, 0.03)",
-                            border: "1px solid rgba(255, 255, 255, 0.06)",
-                            color: "rgba(255, 255, 255, 0.35)",
-                        }}
-                    >
-                        <Plus className="w-4 h-4" />
-                        Add Stop
-                    </button>
-                </div>
-
-                <button
-                    onClick={generate}
+                        onClick={generate}
                     disabled={!canGenerate}
                     className="flex items-center gap-2.5 px-7 py-3 rounded-2xl text-[15px] font-bold transition-all"
                     style={{
@@ -401,6 +383,7 @@ export default function NodeCaptureComponent({ onGenerate }: NodeCaptureProps) {
                         </>
                     )}
                 </button>
+                </div>
             </div>
 
             {/* Progress bar */}

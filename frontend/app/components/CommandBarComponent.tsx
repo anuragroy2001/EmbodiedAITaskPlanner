@@ -9,15 +9,15 @@ import InteractivePlanView from "./InteractivePlanView";
 
 const ROBOT_TYPE_OPTIONS = [
   { value: "humanoid" as const, label: "Humanoid", Icon: HumanoidSvgContent },
-  { value: "quadrupeds" as const, label: "Quadrupeds", Icon: QuadrupedSvgContent },
-  { value: "mobile base" as const, label: "Mobile base", Icon: MobileBaseSvgContent },
+  { value: "quadruped" as const, label: "Quadruped", Icon: QuadrupedSvgContent },
+  { value: "mobile_base" as const, label: "Mobile Base", Icon: MobileBaseSvgContent },
 ] as const;
 type RobotTypeValue = (typeof ROBOT_TYPE_OPTIONS)[number]["value"];
 
 interface CommandBarProps {
     topology: SpatialNode | null;
     systemLogs: string[];
-    onPlanGenerated?: (plan: PlannerOutput) => void;
+    onPlanGenerated?: (plan: PlannerOutput | null) => void;
 }
 
 export default function CommandBarComponent({ topology, systemLogs, onPlanGenerated }: CommandBarProps) {
@@ -27,6 +27,7 @@ export default function CommandBarComponent({ topology, systemLogs, onPlanGenera
     const [robotType, setRobotType] = useState<RobotTypeValue>("humanoid");
     const [latestPlan, setLatestPlan] = useState<PlannerOutput | null>(null);
     const [latestPlanSummary, setLatestPlanSummary] = useState<PlanSummary | null>(null);
+    const [isFollowUpPlanning, setIsFollowUpPlanning] = useState(false);
     const chatEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -48,12 +49,24 @@ export default function CommandBarComponent({ topology, systemLogs, onPlanGenera
 
         const userMsg = chatInput.trim();
         setChatInput('');
+
+        const isFollowUp = chatHistory.length > 0 || latestPlan !== null;
+        if (isFollowUp) {
+            setChatHistory([{ role: 'user', text: userMsg }]);
+            setLatestPlan(null);
+            setLatestPlanSummary(null);
+            onPlanGenerated?.(null);
+        }
+
         const newHistory = [...chatHistory, { role: 'user' as const, text: userMsg }];
-        setChatHistory(newHistory);
+        if (!isFollowUp) {
+            setChatHistory(newHistory);
+        }
+        setIsFollowUpPlanning(isFollowUp);
         setIsChatting(true);
 
         try {
-            const data = await api.planQa(userMsg, topology.node_name, newHistory);
+            const data = await api.planQa(userMsg, topology.node_name, newHistory, robotType);
             if (data.status === "question") {
                 setChatHistory(prev => [...prev, { role: 'model', text: data.text }]);
             } else if (data.status === "plan") {
@@ -120,7 +133,7 @@ export default function CommandBarComponent({ topology, systemLogs, onPlanGenera
                         </div>
                     </div>
                 ))}
-                {isChatting && (
+                {isChatting && !isFollowUpPlanning && (
                     <div className="flex justify-start animate-fade-in shrink-0">
                         <div className="px-3 py-2 rounded-lg flex items-center gap-2"
                             style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
@@ -129,7 +142,16 @@ export default function CommandBarComponent({ topology, systemLogs, onPlanGenera
                         </div>
                     </div>
                 )}
-                {latestPlan && (
+                {isChatting && !isFollowUpPlanning && (
+                    <div
+                        className="rounded-lg overflow-hidden animate-fade-in flex flex-col items-center justify-center py-8 px-4"
+                        style={{ background: "var(--bg-secondary)", border: "1px solid var(--border)" }}
+                    >
+                        <Loader2 className="w-6 h-6 animate-spin mb-2" style={{ color: "var(--text-muted)" }} />
+                        <span className="font-mono text-[13px]" style={{ color: "var(--text-muted)" }}>Planning...</span>
+                    </div>
+                )}
+                {!isChatting && latestPlan && (
                     <InteractivePlanView plan={latestPlan} planSummary={latestPlanSummary} />
                 )}
                 <div ref={chatEndRef} />
@@ -170,16 +192,19 @@ export default function CommandBarComponent({ topology, systemLogs, onPlanGenera
                                     setCookie(ROBOT_TYPE_COOKIE, opt.value, { maxAge: 365 * 24 * 60 * 60, path: "/" });
                                 }}
                                 title={opt.label}
-                                className="flex-1 flex items-center justify-center rounded-lg py-1.5 px-2 transition-all shrink-0"
+                                className="flex-1 flex flex-col items-center justify-center gap-1 rounded-lg py-2 px-2 transition-all shrink-0"
                                 style={{
                                     background: isSelected ? 'var(--accent-dim)' : 'var(--bg-secondary)',
                                     border: `1px solid ${isSelected ? 'var(--accent)' : 'var(--border)'}`,
                                     color: isSelected ? 'var(--accent)' : 'var(--text-muted)',
                                 }}
                             >
-                                <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-7 h-7">
+                                <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-7 h-7 shrink-0">
                                     <Icon />
                                 </svg>
+                                <span className="text-[10px] font-medium truncate w-full text-center" style={{ color: 'inherit' }}>
+                                    {opt.label}
+                                </span>
                             </button>
                         );
                     })}
