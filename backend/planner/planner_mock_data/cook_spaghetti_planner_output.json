@@ -1,0 +1,61 @@
+{
+  "task_id": "task_cook_spaghetti_mock",
+  "goal": "Make spaghetti with tomato sauce",
+  "room": "kitchen_main",
+  "subtasks": [
+    {
+      "id": "t1",
+      "action": "locate",
+      "description": "Get pot and pan from cabinets",
+      "objects": [],
+      "location": null,
+      "duration_estimate_sec": 30,
+      "depends_on": [],
+      "preconditions": [],
+      "success_criteria": ["Pot and pan on counter"]
+    },
+    {
+      "id": "t2",
+      "action": "boil",
+      "description": "Boil water in pot at stove",
+      "objects": ["sink_1"],
+      "location": null,
+      "duration_estimate_sec": 120,
+      "depends_on": ["t1"],
+      "preconditions": ["Pot on stove"],
+      "success_criteria": ["Water boiling"]
+    },
+    {
+      "id": "t3",
+      "action": "cook_sauce",
+      "description": "Prepare tomato sauce in pan",
+      "objects": ["sink_1"],
+      "location": null,
+      "duration_estimate_sec": 300,
+      "depends_on": ["t1"],
+      "preconditions": ["Pan on stove"],
+      "success_criteria": ["Sauce ready"]
+    },
+    {
+      "id": "t4",
+      "action": "combine",
+      "description": "Cook spaghetti in boiling water then combine with sauce",
+      "objects": [],
+      "location": null,
+      "duration_estimate_sec": 600,
+      "depends_on": ["t2", "t3"],
+      "preconditions": ["Water boiling", "Sauce ready"],
+      "success_criteria": ["Spaghetti with tomato sauce ready"]
+    }
+  ],
+  "dependency_graph": {
+    "nodes": ["t1", "t2", "t3", "t4"],
+    "edges": [
+      {"source": "t2", "target": "t1"},
+      {"source": "t3", "target": "t1"},
+      {"source": "t4", "target": "t2"},
+      {"source": "t4", "target": "t3"}
+    ]
+  },
+  "warnings": []
+}

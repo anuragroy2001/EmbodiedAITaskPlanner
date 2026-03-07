@@ -6,6 +6,7 @@ from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
 
 from vla_service import VLAService
+from planner import PlannerRequest, generate_task_dag
 
 app = FastAPI(title="Embodied AI Task Planner Backend")
 
@@ -22,6 +23,8 @@ session_graph = nx.DiGraph()
 node_data: Dict[str, Any] = {}
 node_images: Dict[str, list] = {}       # Store source images per node
 node_map_images: Dict[str, str] = {}    # Store generated map (data URL) per node
+node_locations: Dict[str, list] = {}
+planning_runs: Dict[str, Any] = {}
 
 
 class QueryPayload(BaseModel):
@@ -80,6 +83,7 @@ async def upload_node(
         node_data[actual_name] = topology
         node_images[actual_name] = gemini_images
         node_map_images[actual_name] = map_image
+        node_locations[actual_name] = locations
 
         nodes = list(session_graph.nodes())
         if len(nodes) > 1:
@@ -172,4 +176,33 @@ async def get_node_images(node_id: str):
         data_url = f"data:{img['mime_type']};base64,{img['data']}"
         result.append(data_url)
     return {"node_id": node_id, "images": result, "count": len(result)}
+
+
+@app.post("/api/task-plan")
+async def task_plan(payload: PlannerRequest):
+    topology = node_data.get(payload.node_name)
+    if not topology:
+        raise HTTPException(status_code=404, detail="Node not found")
+    locations = node_locations.get(payload.node_name, [])
+    result = generate_task_dag(
+        topology=topology,
+        locations=locations,
+        goal=payload.goal,
+        node_name=payload.node_name,
+        use_mock=payload.use_mock,
+    )
+    if result.planner_trace and not result.planner_trace.validation_passed:
+        raise HTTPException(
+            status_code=500,
+            detail={"message": "Planner validation failed", "errors": result.planner_trace.errors},
+        )
+    planning_runs[result.task_id] = result.model_dump()
+    return result
+
+
+@app.get("/api/task-plan/{task_id}")
+async def get_task_plan(task_id: str):
+    if task_id not in planning_runs:
+        raise HTTPException(status_code=404, detail="Task plan not found")
+    return planning_runs[task_id]
 
