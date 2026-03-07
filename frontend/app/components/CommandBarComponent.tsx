@@ -44,62 +44,65 @@ export default function CommandBarComponent({ topology, systemLogs }: CommandBar
             setChatHistory(prev => [...prev, { role: 'model', text: data.response || "No response." }]);
         } catch (err) {
             console.error("Chat error:", err);
-            setChatHistory(prev => [...prev, { role: 'model', text: "System Error: VLA offline." }]);
+            setChatHistory(prev => [...prev, { role: 'model', text: "Connection error. VLA offline." }]);
         } finally {
             setIsChatting(false);
         }
     };
 
     return (
-        <div className="flex flex-col h-full rounded-xl overflow-hidden min-h-[300px] max-h-[400px]"
-            style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', backdropFilter: 'blur(16px)' }}>
-            <div className="p-3 flex items-center justify-between"
+        <div className="flex flex-col rounded-2xl overflow-hidden min-h-[280px] max-h-[380px] surface-card">
+            {/* Header */}
+            <div className="px-4 py-2.5 flex items-center justify-between"
                 style={{ borderBottom: '1px solid var(--border)' }}>
                 <div className="flex items-center gap-2">
-                    <MessageSquare className="w-4 h-4" style={{ color: 'var(--accent)' }} />
-                    <h3 className="font-mono font-bold uppercase" style={{ color: 'var(--text-primary)' }}>Spatial Query Interface</h3>
+                    <MessageSquare className="w-3.5 h-3.5" style={{ color: 'var(--accent)' }} />
+                    <h3 className="text-[13px] font-bold" style={{ color: 'var(--text-primary)' }}>
+                        Spatial Query
+                    </h3>
                 </div>
 
                 <div className="flex items-center gap-2">
                     <button
                         onClick={() => setShowTerminal(!showTerminal)}
-                        className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono font-bold transition-all"
+                        className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-medium transition-all"
                         style={{
-                            background: showTerminal ? 'var(--accent)' : 'rgba(255,255,255,0.05)',
-                            color: showTerminal ? '#000' : 'var(--text-muted)',
-                            border: `1px solid ${showTerminal ? 'var(--accent)' : 'var(--border)'}`
+                            background: showTerminal ? 'var(--accent-dim)' : 'transparent',
+                            color: showTerminal ? 'var(--accent)' : 'var(--text-muted)',
+                            border: `1px solid ${showTerminal ? 'var(--accent)' : 'var(--border)'}`,
                         }}
                     >
-                        <Terminal className="w-3 h-3" />
-                        TERMINAL {showTerminal ? 'ON' : 'OFF'}
+                        <Terminal className="w-2.5 h-2.5" />
+                        LOG
                     </button>
 
                     {!topology ? (
-                        <div className="font-mono px-2 py-1 rounded"
-                            style={{ fontSize: '10px', color: '#ef4444', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}>
-                            AWAITING TOPOLOGY CONTEXT
-                        </div>
+                        <span className="font-mono text-[10px] px-2 py-0.5 rounded"
+                            style={{ color: 'var(--danger)', background: 'rgba(248, 113, 113, 0.08)', border: '1px solid rgba(248, 113, 113, 0.15)' }}>
+                            NO CONTEXT
+                        </span>
                     ) : (
-                        <div className="font-mono px-2 py-1 rounded"
-                            style={{ fontSize: '10px', color: 'var(--accent)', background: 'var(--accent-dim)', border: '1px solid var(--border)' }}>
-                            CONTEXT: {topology.node_name}
-                        </div>
+                        <span className="font-mono text-[10px] px-2 py-0.5 rounded"
+                            style={{ color: 'var(--accent)', background: 'var(--accent-dim)' }}>
+                            {topology.node_name}
+                        </span>
                     )}
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4"
+            {/* Chat Area */}
+            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3"
                 style={{ background: 'var(--bg-primary)' }}>
                 {chatHistory.length === 0 && (
-                    <div className="font-mono text-center my-auto flex flex-col items-center gap-2" style={{ color: 'var(--text-muted)' }}>
-                        <Terminal className="w-8 h-8 opacity-20" />
-                        <p>Ask questions about the extracted environment...</p>
-                        <p style={{ fontSize: '12px' }}>E.g., &quot;Where is the microwave?&quot;</p>
+                    <div className="text-center my-auto flex flex-col items-center gap-2" style={{ color: 'var(--text-muted)' }}>
+                        <MessageSquare className="w-6 h-6 opacity-20" />
+                        <p className="text-[13px] font-medium">Ask about the environment</p>
+                        <p className="text-[11px] font-mono opacity-60">&quot;Where is the microwave?&quot;</p>
                     </div>
                 )}
                 {chatHistory.map((msg, i) => (
-                    <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className="max-w-[85%] p-3 rounded-lg font-mono leading-relaxed"
+                    <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
+                        <div className="max-w-[85%] px-3 py-2 rounded-lg text-[13px] leading-relaxed"
                             style={msg.role === 'user'
                                 ? { background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid var(--border-strong)' }
                                 : { background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border)' }
@@ -109,27 +112,27 @@ export default function CommandBarComponent({ topology, systemLogs }: CommandBar
                     </div>
                 ))}
                 {isChatting && (
-                    <div className="flex justify-start">
-                        <div className="p-3 rounded-lg flex items-center gap-2"
+                    <div className="flex justify-start animate-fade-in">
+                        <div className="px-3 py-2 rounded-lg flex items-center gap-2"
                             style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
                             <Loader2 className="w-3 h-3 animate-spin" style={{ color: 'var(--text-muted)' }} />
-                            <span className="font-mono" style={{ color: 'var(--text-muted)' }}>Querying VLA...</span>
+                            <span className="font-mono text-[12px]" style={{ color: 'var(--text-muted)' }}>Querying...</span>
                         </div>
                     </div>
                 )}
                 <div ref={chatEndRef} />
             </div>
 
-            {/* System Terminal Overlay */}
+            {/* System Log */}
             {showTerminal && (
-                <div className="h-32 overflow-y-auto p-3 font-mono text-[10px] space-y-1 animate-in slide-in-from-bottom"
-                    style={{ background: 'rgba(0,0,0,0.8)', borderTop: '1px solid var(--border)', color: '#00FF9D' }}>
+                <div className="h-28 overflow-y-auto px-3 py-2 font-mono text-[10px] space-y-0.5"
+                    style={{ background: 'var(--bg-primary)', borderTop: '1px solid var(--border)', color: 'var(--accent)' }}>
                     {systemLogs.length === 0 ? (
-                        <div className="opacity-50 italic">Init EMBODIED_AI System Kernel...</div>
+                        <div style={{ color: 'var(--text-muted)' }}>Waiting for system events...</div>
                     ) : (
                         systemLogs.map((log, i) => (
                             <div key={i} className="flex gap-2">
-                                <span className="opacity-50">[{new Date().toLocaleTimeString()}]</span>
+                                <span style={{ color: 'var(--text-muted)' }}>{new Date().toLocaleTimeString()}</span>
                                 <span>{log}</span>
                             </div>
                         ))
@@ -138,24 +141,25 @@ export default function CommandBarComponent({ topology, systemLogs }: CommandBar
                 </div>
             )}
 
-            <form onSubmit={handleChatSubmit} className="p-3 flex gap-2"
+            {/* Input */}
+            <form onSubmit={handleChatSubmit} className="px-3 py-2.5 flex gap-2"
                 style={{ borderTop: '1px solid var(--border)' }}>
                 <input
                     type="text"
                     value={chatInput}
                     onChange={e => setChatInput(e.target.value)}
-                    placeholder={topology ? "Query the environment..." : "Process a node first..."}
-                    className="flex-1 rounded px-3 py-2 font-mono focus:outline-none transition-colors"
-                    style={{ background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                    placeholder={topology ? "Ask about the environment..." : "Process a node first"}
+                    className="flex-1 rounded-lg px-3 py-1.5 text-[13px] transition-colors"
+                    style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
                     disabled={isChatting || !topology}
                 />
                 <button
                     type="submit"
                     disabled={isChatting || !chatInput.trim() || !topology}
-                    className="px-4 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
-                    style={{ background: 'var(--accent)', color: '#000' }}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center disabled:opacity-30 transition-all"
+                    style={{ background: 'var(--accent)', color: '#09090B' }}
                 >
-                    <Send className="w-4 h-4" />
+                    <Send className="w-3.5 h-3.5" />
                 </button>
             </form>
         </div>

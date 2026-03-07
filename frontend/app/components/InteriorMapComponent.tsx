@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Download, X, Eye, Loader2 } from "lucide-react";
+import { Download, X, Eye, Loader2, Send } from "lucide-react";
 import { ObjectLocation, SpatialNode } from "../lib/api";
 
 interface InteriorMapProps {
@@ -29,7 +29,6 @@ export default function InteriorMapComponent({
 
     const isDark = theme === 'dark';
 
-    // Find the image_indices for a given object from the topology
     const getImageIndices = (objectId: string): number[] => {
         const anchor = topology.static_anchors?.find(a => a.anchor_id === objectId);
         if (anchor) return anchor.image_indices || [];
@@ -40,9 +39,9 @@ export default function InteriorMapComponent({
 
     const getObjectLabel = (objectId: string): string => {
         const anchor = topology.static_anchors?.find(a => a.anchor_id === objectId);
-        if (anchor) return `${anchor.type}`;
+        if (anchor) return anchor.type;
         const obj = topology.dynamic_objects?.find(d => d.object_id === objectId);
-        if (obj) return `${obj.type}`;
+        if (obj) return obj.type;
         return objectId;
     };
 
@@ -66,12 +65,9 @@ export default function InteriorMapComponent({
         setIsDispatching(true);
         onAddSystemLog("Starting ROS2 Trajectory Serialization...");
 
-        // Translate visual % coordinates to "metric" (1% = 0.1m)
         const waypoints = locations.map(loc => {
             const centerX = (loc.xmin + loc.xmax) / 2;
             const centerY = (loc.ymin + loc.ymax) / 2;
-
-            // Map to simulated metric space
             const metricX = centerX * 0.1;
             const metricY = centerY * 0.1;
 
@@ -90,11 +86,10 @@ export default function InteriorMapComponent({
             waypoints: waypoints
         };
 
-        onAddSystemLog(`[SYSTEM] Trajectory serialized to PoseStamped array (${waypoints.length} waypoints).`);
+        onAddSystemLog(`Trajectory serialized: ${waypoints.length} waypoints`);
 
         try {
-            onAddSystemLog(`[SYSTEM] Dispatching to: ${robotApiUrl}`);
-            // Simulated fetch
+            onAddSystemLog(`Dispatching to: ${robotApiUrl}`);
             await fetch(robotApiUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -103,11 +98,11 @@ export default function InteriorMapComponent({
                 console.log("Simulated network bypass for demo.");
             });
 
-            onAddSystemLog(`[SYSTEM] Successfully dispatched ${waypoints.length} waypoints to ROS2 Nav2 Action Server.`);
+            onAddSystemLog(`Dispatched ${waypoints.length} waypoints to Nav2`);
             alert("Path Sent to Hardware Controller");
         } catch (err) {
-            onAddSystemLog("[SYSTEM] Dispatch failed, but simulated success for demo.");
-            onAddSystemLog(`[SYSTEM] Successfully dispatched ${waypoints.length} waypoints to ROS2 Nav2 Action Server.`);
+            onAddSystemLog("Dispatch failed, simulated success for demo.");
+            onAddSystemLog(`Dispatched ${waypoints.length} waypoints to Nav2`);
         } finally {
             setIsDispatching(false);
         }
@@ -115,26 +110,36 @@ export default function InteriorMapComponent({
 
     return (
         <div className="w-full h-full relative">
-            {/* Download Button */}
-            <div className="absolute top-3 right-3 z-20 flex flex-col gap-2">
+            {/* Action buttons */}
+            <div className="absolute top-3 right-3 z-20 flex gap-1.5">
                 <button onClick={handleDownload}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all hover:scale-105"
-                    style={{ background: isDark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.9)', border: `1px solid ${isDark ? '#333' : '#ccc'}`, color: isDark ? '#00FF9D' : '#059669' }}>
-                    <Download className="w-3 h-3" /> SAVE MAP
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-medium transition-all hover:scale-[1.02]"
+                    style={{
+                        background: isDark ? 'rgba(9,9,11,0.9)' : 'rgba(255,255,255,0.95)',
+                        border: '1px solid var(--border-strong)',
+                        color: 'var(--text-secondary)',
+                        backdropFilter: 'blur(8px)',
+                    }}>
+                    <Download className="w-3 h-3" /> Save
                 </button>
                 <button
                     onClick={dispatchToHardware}
                     disabled={isDispatching}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all hover:scale-105 disabled:opacity-50"
-                    style={{ background: isDark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.9)', border: `1px solid ${isDark ? '#00FF9D' : '#059669'}`, color: isDark ? '#00FF9D' : '#059669' }}>
-                    {isDispatching ? <Loader2 className="w-3 h-3 animate-spin" /> : '🚀'} SEND TO ROBOT
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-mono font-medium transition-all hover:scale-[1.02] disabled:opacity-50"
+                    style={{
+                        background: 'var(--accent-dim)',
+                        border: '1px solid var(--accent)',
+                        color: 'var(--accent)',
+                        backdropFilter: 'blur(8px)',
+                    }}>
+                    {isDispatching ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+                    Robot
                 </button>
             </div>
 
-            {/* Map Image */}
-            <img src={mapImage} alt="Bird's Eye View" className="w-full h-full object-contain" />
+            <img src={mapImage} alt="Floor Plan" className="w-full h-full object-contain" />
 
-            {/* Interactive Bounding Boxes */}
+            {/* Bounding boxes */}
             {locations?.map(loc => {
                 const isHovered = hoveredId === loc.object_id;
                 const isSelected = selectedObjectId === loc.object_id;
@@ -147,23 +152,35 @@ export default function InteriorMapComponent({
                         onMouseEnter={() => setHoveredId(loc.object_id)}
                         onMouseLeave={() => setHoveredId(null)}
                         onClick={(e) => { e.stopPropagation(); handleObjectClick(loc.object_id); }}
-                        className="absolute cursor-pointer transition-all duration-200"
+                        className="absolute cursor-pointer transition-all duration-150"
                         style={{
                             top: `${Math.max(0, Math.min(100, loc.ymin))}%`,
                             left: `${Math.max(0, Math.min(100, loc.xmin))}%`,
                             width: `${Math.max(2, Math.min(100 - loc.xmin, loc.xmax - loc.xmin))}%`,
                             height: `${Math.max(2, Math.min(100 - loc.ymin, loc.ymax - loc.ymin))}%`,
-                            border: isSelected ? '2px solid #00FF9D' : isHovered ? '2px solid rgba(255,255,255,0.8)' : '2px solid transparent',
-                            background: isSelected ? 'rgba(0,255,157,0.15)' : isHovered ? 'rgba(255,255,255,0.1)' : 'transparent',
-                            boxShadow: isSelected ? '0 0 20px rgba(0,255,157,0.5)' : 'none',
+                            border: isSelected
+                                ? '1.5px solid var(--accent)'
+                                : isHovered
+                                    ? '1.5px solid var(--text-muted)'
+                                    : '1.5px solid transparent',
+                            background: isSelected
+                                ? 'rgba(103, 232, 249, 0.1)'
+                                : isHovered
+                                    ? 'rgba(255, 255, 255, 0.05)'
+                                    : 'transparent',
+                            borderRadius: '4px',
                             zIndex: isSelected || isHovered ? 10 : 1,
                         }}
                     >
-                        {/* Label tooltip */}
                         {(isHovered || isSelected) && (
-                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 flex items-center gap-1 px-2 py-1 rounded whitespace-nowrap text-[10px] font-mono font-bold"
-                                style={{ background: 'rgba(0,0,0,0.9)', border: isSelected ? '1px solid #00FF9D' : '1px solid #555', color: '#fff' }}>
-                                {hasSource && <Eye className="w-2.5 h-2.5 text-[#00FF9D]" />}
+                            <div className="absolute -top-7 left-1/2 -translate-x-1/2 flex items-center gap-1 px-2 py-0.5 rounded whitespace-nowrap text-[10px] font-mono font-medium"
+                                style={{
+                                    background: isDark ? 'rgba(9,9,11,0.95)' : 'rgba(255,255,255,0.95)',
+                                    border: isSelected ? '1px solid var(--accent)' : '1px solid var(--border-strong)',
+                                    color: isSelected ? 'var(--accent)' : 'var(--text-primary)',
+                                    backdropFilter: 'blur(8px)',
+                                }}>
+                                {hasSource && <Eye className="w-2.5 h-2.5" style={{ color: 'var(--accent)' }} />}
                                 {label}
                             </div>
                         )}
@@ -171,42 +188,42 @@ export default function InteriorMapComponent({
                 );
             })}
 
-            {/* Source Image Viewer Popup */}
+            {/* Source image viewer */}
             {viewingSource && sourceImages.length > 0 && (
                 <div className="absolute inset-0 z-30 flex items-center justify-center"
-                    style={{ background: 'rgba(0,0,0,0.85)' }}>
-                    <div className="relative max-w-2xl w-full mx-4 rounded-xl overflow-hidden"
-                        style={{ background: isDark ? '#111' : '#fff', border: `1px solid ${isDark ? '#333' : '#ddd'}` }}>
-
-                        {/* Header */}
-                        <div className="p-3 flex items-center justify-between"
-                            style={{ borderBottom: `1px solid ${isDark ? '#333' : '#ddd'}` }}>
+                    style={{ background: 'rgba(9, 9, 11, 0.9)', backdropFilter: 'blur(4px)' }}>
+                    <div className="relative max-w-2xl w-full mx-4 rounded-xl overflow-hidden surface-card">
+                        <div className="px-4 py-3 flex items-center justify-between"
+                            style={{ borderBottom: '1px solid var(--border)' }}>
                             <div className="flex items-center gap-2">
-                                <Eye className="w-4 h-4" style={{ color: '#00FF9D' }} />
-                                <span className="text-sm font-mono font-bold">
-                                    Source Photos: {getObjectLabel(viewingSource.objectId)}
+                                <Eye className="w-3.5 h-3.5" style={{ color: 'var(--accent)' }} />
+                                <span className="text-[13px] font-bold">
+                                    {getObjectLabel(viewingSource.objectId)}
+                                </span>
+                                <span className="font-mono text-[10px] px-1.5 py-0.5 rounded"
+                                    style={{ color: 'var(--text-muted)', background: 'var(--bg-secondary)' }}>
+                                    {viewingSource.imageIndices.length} photos
                                 </span>
                             </div>
                             <button onClick={() => setViewingSource(null)}
-                                className="p-1 rounded hover:bg-gray-700 transition-colors">
-                                <X className="w-4 h-4" />
+                                className="w-6 h-6 rounded flex items-center justify-center transition-colors hover:bg-[var(--bg-secondary)]">
+                                <X className="w-3.5 h-3.5" style={{ color: 'var(--text-muted)' }} />
                             </button>
                         </div>
 
-                        {/* Images Grid */}
-                        <div className="p-4 grid grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto">
+                        <div className="p-4 grid grid-cols-2 gap-2 max-h-[60vh] overflow-y-auto">
                             {viewingSource.imageIndices.map(idx => {
-                                const directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+                                const dirLabels = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
                                 const imgSrc = sourceImages[idx];
                                 if (!imgSrc) return null;
                                 return (
                                     <div key={idx} className="relative rounded-lg overflow-hidden"
-                                        style={{ border: `1px solid ${isDark ? '#333' : '#ddd'}` }}>
-                                        <img src={imgSrc} alt={`Direction ${directions[idx] || idx}`}
+                                        style={{ border: '1px solid var(--border)' }}>
+                                        <img src={imgSrc} alt={dirLabels[idx] || `IMG ${idx}`}
                                             className="w-full h-auto object-cover" />
-                                        <div className="absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-mono font-bold"
-                                            style={{ background: 'rgba(0,0,0,0.75)', color: '#00FF9D' }}>
-                                            {directions[idx] || `IMG ${idx}`}
+                                        <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold"
+                                            style={{ background: 'rgba(9,9,11,0.8)', color: 'var(--accent)', backdropFilter: 'blur(4px)' }}>
+                                            {dirLabels[idx] || `${idx}`}
                                         </div>
                                     </div>
                                 );

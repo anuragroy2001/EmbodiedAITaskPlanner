@@ -5,7 +5,6 @@ import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Text, Environment } from '@react-three/drei';
 import * as THREE from 'three';
 
-// Interfaces matching the backend output
 interface SpatialNode {
     node_name: string;
     static_anchors: { anchor_id: string; type: string; description: string; image_indices: number[] }[];
@@ -29,9 +28,15 @@ interface DigitalTwinProps {
     onSelectObject: (id: string | null) => void;
 }
 
-const GRID_SIZE = 128; // High resolution voxel grid
+const GRID_SIZE = 128;
 const FLOOR_WIDTH = 16;
 const FLOOR_DEPTH = 9;
+
+const TWIN_COLORS = {
+    anchor: '#818CF8',
+    object: '#FDE68A',
+    selected: '#67E8F9',
+};
 
 function VoxelMap({ mapImage }: { mapImage: string }) {
     const [voxelData, setVoxelData] = useState<{ position: [number, number, number], color: THREE.Color, scale: number }[]>([]);
@@ -61,17 +66,13 @@ function VoxelMap({ mapImage }: { mapImage: string }) {
                     const g = imageData[i + 1];
                     const b = imageData[i + 2];
 
-                    // Calculate brightness (0-255)
                     const brightness = (r + g + b) / 3;
-
-                    // Invert brightness for height: darker = taller (walls/lines), lighter = flat (floor)
                     let normalizedHeight = 1.0 - (brightness / 255);
 
-                    // Enhance contrast: make walls pop, keep floor flat
                     if (normalizedHeight < 0.2) {
-                        normalizedHeight = 0.05; // Floor
+                        normalizedHeight = 0.05;
                     } else {
-                        normalizedHeight = Math.pow(normalizedHeight, 1.5) * 3; // Walls/Objects
+                        normalizedHeight = Math.pow(normalizedHeight, 1.5) * 3;
                     }
 
                     const height = Math.max(0.1, normalizedHeight);
@@ -82,7 +83,6 @@ function VoxelMap({ mapImage }: { mapImage: string }) {
 
                     voxels.push({
                         position: [px, py, pz] as [number, number, number],
-                        // Use the actual color from the image, slightly darkened for depth
                         color: new THREE.Color(`rgb(${Math.max(0, r - 20)},${Math.max(0, g - 20)},${Math.max(0, b - 20)})`),
                         scale: height
                     });
@@ -132,10 +132,8 @@ function Scene({ mapImage, locations, topology, selectedObjectId, onSelectObject
             <directionalLight position={[10, 15, 10]} intensity={1.2} castShadow shadow-mapSize={[2048, 2048]} />
             <Environment preset="city" />
 
-            {/* Voxel Generated Map */}
             <VoxelMap mapImage={mapImage} />
 
-            {/* Interactive Objects Overlay */}
             {locations?.map((loc) => {
                 const isStatic = staticAnchorIds.has(loc.object_id);
                 const isSelected = selectedObjectId === loc.object_id;
@@ -153,33 +151,25 @@ function Scene({ mapImage, locations, topology, selectedObjectId, onSelectObject
                 const z = (czPct - 0.5) * FLOOR_DEPTH;
                 const y = h / 2;
 
+                const color = isSelected ? TWIN_COLORS.selected : (isStatic ? TWIN_COLORS.anchor : TWIN_COLORS.object);
+
                 return (
                     <group key={loc.object_id} position={[x, y, z]}>
                         <mesh
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onSelectObject(isSelected ? null : loc.object_id);
-                            }}
-                            onPointerOver={(e) => {
-                                e.stopPropagation();
-                                document.body.style.cursor = 'pointer';
-                            }}
-                            onPointerOut={(e) => {
-                                e.stopPropagation();
-                                document.body.style.cursor = 'auto';
-                            }}
+                            onClick={(e) => { e.stopPropagation(); onSelectObject(isSelected ? null : loc.object_id); }}
+                            onPointerOver={(e) => { e.stopPropagation(); document.body.style.cursor = 'pointer'; }}
+                            onPointerOut={(e) => { e.stopPropagation(); document.body.style.cursor = 'auto'; }}
                         >
                             <boxGeometry args={[w, h, d]} />
                             <meshStandardMaterial
-                                color={isSelected ? '#00FF9D' : (isStatic ? '#008000' : '#FFA500')}
+                                color={color}
                                 transparent
-                                opacity={isSelected ? 0.8 : 0.3}
+                                opacity={isSelected ? 0.7 : 0.25}
                                 roughness={0.1}
                                 metalness={0.5}
                             />
                         </mesh>
 
-                        {/* Label */}
                         {(isSelected || isStatic) && (
                             <Text
                                 position={[0, h / 2 + 0.4, 0]}
@@ -189,6 +179,7 @@ function Scene({ mapImage, locations, topology, selectedObjectId, onSelectObject
                                 anchorY="middle"
                                 outlineWidth={0.05}
                                 outlineColor="black"
+                                font={undefined}
                             >
                                 {loc.object_id}
                             </Text>
@@ -202,7 +193,7 @@ function Scene({ mapImage, locations, topology, selectedObjectId, onSelectObject
 
 export default function DigitalTwin(props: DigitalTwinProps) {
     return (
-        <div className="w-full h-full bg-[#0a0a0a] relative min-h-[400px]">
+        <div className="w-full h-full relative min-h-[420px]" style={{ background: '#020108' }}>
             <Canvas camera={{ position: [0, 12, 12], fov: 45 }} shadows>
                 <React.Suspense fallback={null}>
                     <Scene {...props} />
@@ -218,19 +209,18 @@ export default function DigitalTwin(props: DigitalTwinProps) {
             </Canvas>
 
             {/* Legend */}
-            <div className="absolute bottom-4 left-4 bg-[#111]/80 backdrop-blur border border-[#333] p-3 rounded-lg text-[10px] font-mono text-[#888] flex flex-col gap-2 pointer-events-none z-10">
-                <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-[#008000] border border-white opacity-60"></div>
-                    <span>Static Anchor (Interactive)</span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-[#FFA500] border border-white opacity-60"></div>
-                    <span>Dynamic Object (Interactive)</span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-[#00FF9D] border border-white opacity-90"></div>
-                    <span>Selected</span>
-                </div>
+            <div className="absolute bottom-3 left-3 flex gap-3 px-3 py-2 rounded-lg text-[10px] font-mono pointer-events-none z-10"
+                style={{ background: 'rgba(9,9,11,0.85)', border: '1px solid var(--border)', backdropFilter: 'blur(8px)' }}>
+                {[
+                    { color: TWIN_COLORS.anchor, label: 'Anchor' },
+                    { color: TWIN_COLORS.object, label: 'Object' },
+                    { color: TWIN_COLORS.selected, label: 'Selected' },
+                ].map(item => (
+                    <div key={item.label} className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 rounded-[2px]" style={{ background: item.color, opacity: 0.7 }} />
+                        <span style={{ color: '#71717A' }}>{item.label}</span>
+                    </div>
+                ))}
             </div>
         </div>
     );
