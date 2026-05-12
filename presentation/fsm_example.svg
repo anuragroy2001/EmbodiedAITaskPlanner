@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="510" viewBox="0 0 1280 510" font-family="Arial, Helvetica, sans-serif">
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#555" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="arrow-dash" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#999" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <rect width="1280" height="510" fill="#FFFFFF"/>
+
+  <!-- START dot -->
+  <circle cx="200" cy="24" r="10" fill="#444"/>
+  <line x1="200" y1="34" x2="200" y2="52" stroke="#444" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- ROW 1: Idle -->
+  <rect x="90" y="52" width="220" height="56" rx="10" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1.5"/>
+  <text x="200" y="77" text-anchor="middle" font-size="16" font-weight="700" fill="#085041">Idle</text>
+  <text x="200" y="98" text-anchor="middle" font-size="12" fill="#0F6E56">Awaiting command</text>
+
+  <!-- ROW 1: Charging -->
+  <rect x="970" y="52" width="220" height="56" rx="10" fill="#EAF3DE" stroke="#3B6D11" stroke-width="1.5"/>
+  <text x="1080" y="77" text-anchor="middle" font-size="16" font-weight="700" fill="#27500A">Charging</text>
+  <text x="1080" y="98" text-anchor="middle" font-size="12" fill="#3B6D11">Docked at base</text>
+
+  <!-- ROW 2: Cleaning -->
+  <rect x="530" y="172" width="220" height="56" rx="10" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1.5"/>
+  <text x="640" y="197" text-anchor="middle" font-size="16" font-weight="700" fill="#085041">Cleaning</text>
+  <text x="640" y="218" text-anchor="middle" font-size="12" fill="#0F6E56">Navigating &amp; vacuuming</text>
+
+  <!-- ROW 3: Obstacle detected -->
+  <rect x="90" y="302" width="240" height="56" rx="10" fill="#FAEEDA" stroke="#854F0B" stroke-width="1.5"/>
+  <text x="210" y="327" text-anchor="middle" font-size="16" font-weight="700" fill="#633806">Obstacle detected</text>
+  <text x="210" y="348" text-anchor="middle" font-size="12" fill="#854F0B">Replanning route</text>
+
+  <!-- ROW 3: Low battery -->
+  <rect x="970" y="302" width="220" height="56" rx="10" fill="#FAEEDA" stroke="#854F0B" stroke-width="1.5"/>
+  <text x="1080" y="327" text-anchor="middle" font-size="16" font-weight="700" fill="#633806">Low battery</text>
+  <text x="1080" y="348" text-anchor="middle" font-size="12" fill="#854F0B">Below 15%</text>
+
+  <!-- ROW 4: Returning to base -->
+  <rect x="320" y="412" width="240" height="56" rx="10" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+  <text x="440" y="437" text-anchor="middle" font-size="16" font-weight="700" fill="#0C447C">Returning to base</text>
+  <text x="440" y="458" text-anchor="middle" font-size="12" fill="#185FA5">Navigating to dock</text>
+
+  <!-- ROW 4: Error -->
+  <rect x="970" y="412" width="220" height="56" rx="10" fill="#FCEBEB" stroke="#A32D2D" stroke-width="1.5"/>
+  <text x="1080" y="437" text-anchor="middle" font-size="16" font-weight="700" fill="#791F1F">Error</text>
+  <text x="1080" y="458" text-anchor="middle" font-size="12" fill="#A32D2D">Fault detected</text>
+
+  <!-- TRANSITIONS -->
+
+  <!-- Idle → Charging (top) -->
+  <path d="M310 68 L970 68" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="640" y="62" text-anchor="middle" font-size="11" fill="#555">dock &amp; charge</text>
+
+  <!-- Charging → Idle (dashed, slightly lower) -->
+  <path d="M970 95 L310 95" fill="none" stroke="#999" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#arrow-dash)"/>
+  <text x="640" y="112" text-anchor="middle" font-size="11" fill="#999">fully charged</text>
+
+  <!-- Idle → Cleaning -->
+  <path d="M310 80 L400 80 L400 200 L530 200" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="404" y="142" text-anchor="start" font-size="11" fill="#555">start cleaning</text>
+
+  <!-- Cleaning → Obstacle detected -->
+  <path d="M530 200 L50 200 L50 330 L90 330" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="54" y="265" text-anchor="start" font-size="11" fill="#555">obstacle</text>
+
+  <!-- Obstacle detected → Cleaning (dashed) -->
+  <path d="M330 320 L440 320 L440 228 L530 228" fill="none" stroke="#999" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#arrow-dash)"/>
+  <text x="443" y="276" text-anchor="start" font-size="11" fill="#999">path clear</text>
+
+  <!-- Cleaning → Low battery -->
+  <path d="M750 200 L1230 200 L1230 330 L1190 330" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="1226" y="265" text-anchor="end" font-size="11" fill="#555">battery low</text>
+
+  <!-- Cleaning → Error (fault) -->
+  <path d="M640 228 L640 380 L1080 380 L1080 412" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="643" y="305" text-anchor="start" font-size="11" fill="#555">fault</text>
+
+  <!-- Obstacle → Returning to base -->
+  <path d="M210 358 L210 390 L390 390 L390 412" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="194" y="377" text-anchor="end" font-size="11" fill="#555">no route</text>
+
+  <!-- Low battery → Returning to base -->
+  <path d="M1080 358 L1080 396 L560 396 L560 412" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="820" y="392" text-anchor="middle" font-size="11" fill="#555">return home</text>
+
+  <!-- Returning to base → Charging -->
+  <path d="M560 440 L910 440 L910 80 L970 80" fill="none" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="913" y="262" text-anchor="start" font-size="11" fill="#555">docked</text>
+
+  <!-- Error → Idle (dashed reset) -->
+  <path d="M1080 468 L1080 488 L50 488 L50 80 L90 80" fill="none" stroke="#999" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#arrow-dash)"/>
+  <text x="565" y="500" text-anchor="middle" font-size="11" fill="#999">reset</text>
+
+  <!-- LEGEND -->
+  <line x1="80" y1="498" x2="108" y2="498" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="114" y="502" font-size="11" fill="#555">Normal transition</text>
+  <line x1="270" y1="498" x2="298" y2="498" stroke="#999" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#arrow-dash)"/>
+  <text x="304" y="502" font-size="11" fill="#999">Recovery transition</text>
+
+</svg>

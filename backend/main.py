@@ -16,6 +16,8 @@ from cache import (
     save_layout,
     load_map,
     save_map,
+    load_plan,
+    save_plan,
 )
 
 app = FastAPI(title="RPG — Robotic Planning with Gemini")
@@ -34,6 +36,7 @@ node_data: Dict[str, Any] = {}
 node_images: Dict[str, list] = {}       # Store source images per node
 node_map_images: Dict[str, str] = {}    # Store generated map (data URL) per node
 node_locations: Dict[str, list] = {}
+node_cache_keys: Dict[str, str] = {}    # image cache key per node
 planning_runs: Dict[str, Any] = {}
 
 
@@ -146,6 +149,7 @@ async def upload_node(
         node_images[actual_name] = gemini_images
         node_map_images[actual_name] = map_image
         node_locations[actual_name] = locations
+        node_cache_keys[actual_name] = cache_key
 
         nodes = list(session_graph.nodes())
         if len(nodes) > 1:
@@ -227,6 +231,20 @@ async def plan_qa(payload: PlanQAPayload):
         print(f"[plan-qa] Goal extracted: {goal!r}")
         locations = node_locations.get(payload.node_name, [])
         print(f"[plan-qa] Locations count: {len(locations)}")
+
+        image_key = node_cache_keys.get(payload.node_name)
+        cached_plan = load_plan(image_key, goal, payload.robot_type) if image_key and not payload.use_mock else None
+        if cached_plan is not None:
+            print(f"[plan-qa] ✓ Plan from cache: task_id={cached_plan.get('task_id')!r}")
+            planning_runs[cached_plan["task_id"]] = cached_plan
+            plan_summary = PlanSummary(
+                goal=cached_plan.get("goal", goal),
+                room=cached_plan.get("room", payload.node_name),
+                subtask_count=len(cached_plan.get("subtasks", [])),
+                dependency_count=len(cached_plan.get("dependency_graph", {}).get("edges", [])),
+            )
+            return PlanQAPlanResponse(plan=cached_plan, plan_summary=plan_summary).model_dump(mode="json")
+
         try:
             print("[plan-qa] Calling generate_task_dag(...)")
             plan_result = generate_task_dag(
@@ -248,6 +266,9 @@ async def plan_qa(payload: PlanQAPayload):
                 errors=plan_result.planner_trace.errors,
             ).model_dump(mode="json")
         print(f"[plan-qa] Plan generated: task_id={plan_result.task_id!r}, subtasks={len(plan_result.subtasks)}, validation_passed={getattr(plan_result.planner_trace, 'validation_passed', None)}")
+        if image_key:
+            save_plan(image_key, goal, payload.robot_type, plan_dict)
+            print(f"[plan-qa] Plan saved to cache")
         planning_runs[plan_result.task_id] = plan_dict
         plan_summary = PlanSummary(
             goal=plan_result.goal,
@@ -319,21 +340,33 @@ async def task_plan(payload: PlannerRequest):
     if not topology:
         raise HTTPException(status_code=404, detail="Node not found")
     locations = node_locations.get(payload.node_name, [])
+    robot_type = payload.robot_type.value
+
+    image_key = node_cache_keys.get(payload.node_name)
+    cached_plan = load_plan(image_key, payload.goal, robot_type) if image_key else None
+    if cached_plan is not None:
+        print(f"[task-plan] ✓ Plan from cache: task_id={cached_plan.get('task_id')!r}")
+        planning_runs[cached_plan["task_id"]] = cached_plan
+        return cached_plan
+
     result = generate_task_dag(
         topology=topology,
         locations=locations,
         goal=payload.goal,
         node_name=payload.node_name,
-        # use_mock=payload.use_mock,
         use_mock=False,
-        robot_type=payload.robot_type.value,
+        robot_type=robot_type,
     )
     if result.planner_trace and not result.planner_trace.validation_passed:
         raise HTTPException(
             status_code=500,
             detail={"message": "Planner validation failed", "errors": result.planner_trace.errors},
         )
-    planning_runs[result.task_id] = result.model_dump(mode="json")
+    plan_dict = result.model_dump(mode="json")
+    if image_key:
+        save_plan(image_key, payload.goal, robot_type, plan_dict)
+        print(f"[task-plan] Plan saved to cache")
+    planning_runs[result.task_id] = plan_dict
     return result
 
 

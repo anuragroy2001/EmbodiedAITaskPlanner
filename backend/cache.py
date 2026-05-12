@@ -14,6 +14,7 @@ TOPOLOGY_FILE = "topology.json"
 LAYOUT_FILE = "layout.txt"
 MAP_FILE = "map.png"
 MAP_MIME_FILE = "map.mime"
+PLANS_DIR = "plans"
 
 
 def get_cache_key(filenames: List[str]) -> str:
@@ -104,4 +105,33 @@ def is_full_hit(key: str) -> bool:
         (d / TOPOLOGY_FILE).is_file()
         and (d / LAYOUT_FILE).is_file()
         and (d / MAP_FILE).is_file()
+    )
+
+
+def get_plan_cache_key(image_key: str, goal: str, robot_type: str = "humanoid") -> str:
+    """Deterministic key for a plan scoped to a room + goal + robot_type."""
+    stable = f"{image_key}|{goal.strip().lower()}|{robot_type.strip().lower()}"
+    digest = hashlib.sha256(stable.encode("utf-8")).hexdigest()
+    return digest[:16]
+
+
+def load_plan(image_key: str, goal: str, robot_type: str = "humanoid") -> Optional[dict]:
+    """Load a cached plan dict, or None if not cached."""
+    plan_key = get_plan_cache_key(image_key, goal, robot_type)
+    path = get_cache_dir(image_key) / PLANS_DIR / f"{plan_key}.json"
+    if not path.is_file():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None
+
+
+def save_plan(image_key: str, goal: str, robot_type: str, plan_dict: dict) -> None:
+    """Persist a plan dict to cache."""
+    plan_key = get_plan_cache_key(image_key, goal, robot_type)
+    d = get_cache_dir(image_key) / PLANS_DIR
+    d.mkdir(parents=True, exist_ok=True)
+    (d / f"{plan_key}.json").write_text(
+        json.dumps(plan_dict, indent=2), encoding="utf-8"
     )

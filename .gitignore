@@ -34,3 +34,4 @@ backend/cache/
 
 # Reference / personal files
 spatial-ai-node-analyzer/
+.claude/
